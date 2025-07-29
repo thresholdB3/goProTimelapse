@@ -12,3 +12,4 @@ C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\refint\dfsdf.dll
 C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\dfsdf.pdb
 C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\dfsdf.genruntimeconfig.cache
 C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\ref\dfsdf.dll
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\dfsdf.sourcelink.json
