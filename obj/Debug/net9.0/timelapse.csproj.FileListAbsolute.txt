@@ -1,0 +1,15 @@
+C:\Users\LevyNosok_\Desktop\dfsdf\bin\Debug\net9.0\timelapse.exe
+C:\Users\LevyNosok_\Desktop\dfsdf\bin\Debug\net9.0\timelapse.deps.json
+C:\Users\LevyNosok_\Desktop\dfsdf\bin\Debug\net9.0\timelapse.runtimeconfig.json
+C:\Users\LevyNosok_\Desktop\dfsdf\bin\Debug\net9.0\timelapse.dll
+C:\Users\LevyNosok_\Desktop\dfsdf\bin\Debug\net9.0\timelapse.pdb
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\timelapse.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\timelapse.AssemblyInfoInputs.cache
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\timelapse.AssemblyInfo.cs
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\timelapse.csproj.CoreCompileInputs.cache
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\timelapse.sourcelink.json
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\timelapse.dll
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\refint\timelapse.dll
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\timelapse.pdb
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\timelapse.genruntimeconfig.cache
+C:\Users\LevyNosok_\Desktop\dfsdf\obj\Debug\net9.0\ref\timelapse.dll

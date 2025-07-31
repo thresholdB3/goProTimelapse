@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\LevyNosok_\\Desktop\\dfsdf\\dfsdf.csproj",
-      "projectName": "dfsdf",
-      "projectPath": "C:\\Users\\LevyNosok_\\Desktop\\dfsdf\\dfsdf.csproj",
+      "projectUniqueName": "c:\\Users\\LevyNosok_\\Desktop\\dfsdf\\timelapse.csproj",
+      "projectName": "timelapse",
+      "projectPath": "c:\\Users\\LevyNosok_\\Desktop\\dfsdf\\timelapse.csproj",
       "packagesPath": "C:\\Users\\LevyNosok_\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\LevyNosok_\\Desktop\\dfsdf\\obj\\",
+      "outputPath": "c:\\Users\\LevyNosok_\\Desktop\\dfsdf\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\LevyNosok_\\AppData\\Roaming\\NuGet\\NuGet.Config"
