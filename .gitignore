@@ -1,3 +1,5 @@
 bin/
 obj/
 GoProPhotos/
+ffmpeg.exe
+ffprobe.exe

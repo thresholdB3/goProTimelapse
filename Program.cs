@@ -7,6 +7,7 @@ using System.Linq;
 using System.Diagnostics;
 using System.Transactions;
 using System.Text;
+using Microsoft.Extensions.Configuration; 
 
 
 class Program
@@ -14,20 +15,27 @@ class Program
     static async Task Main()
     {
         HttpClient client = new HttpClient();
-        string baseUrl = "http://10.5.5.9";
-        string mediaUrl = "http://10.5.5.9:8080/videos/DCIM";
-        string folderUrl = "http://10.5.5.9:8080/videos/DCIM/100GOPRO/";
-        string mediaHtml = @"href=""/videos/DCIM/100GOPRO/";
-        string downloadFolder = "GoProPhotos";
-        
-        string ssid1 = "vivo Y22"; //имя основного wifi
-        string password1 = "levynosok0"; //его пароль
-        string camera_ssid = "GP53119127";
-        string camera_password = "p=n-6VT-6Kn";
         //здесь будет время начала и конца заката
         DateTime timeStart = DateTime.Now;
-        DateTime timeStop = new DateTime(2025, 8, 5, 14, 30, 00);//год, месяц, день, часы, минуты, секунды
-        int photoDelay = 15;
+        DateTime timeStop = new DateTime(2025, 8, 6, 15, 30, 00);//год, месяц, день, часы, минуты, секунды
+
+        string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..\\..\\.."));
+        var configuration = new ConfigurationBuilder()
+                            .SetBasePath(projectRoot) 
+                            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true) 	.Build(); 
+
+        int photoDelay = int.Parse(configuration["photoDelay"]);
+        string baseUrl = configuration["url:baseUrl"];
+        string mediaUrl = configuration["url:mediaUrl"];
+        string folderUrl = configuration["url:folderUrl"];
+        string mediaHtml = configuration["url:mediaHtml"];
+        string downloadFolder = configuration["downloadFolder"];
+        
+        string ssid1 = configuration["wifi:main:ssid"]; //имя основного wifi
+        string password1 = configuration["wifi:main:password"]; //его пароль
+        string camera_ssid = configuration["wifi:camera:ssid"];
+        string camera_password = configuration["wifi:camera:password"];
+
 
         ConnectWiFi(camera_ssid, camera_password);
         await Task.Delay(3000); //3 секунды на подключение
@@ -50,7 +58,7 @@ class Program
 
         ConnectWiFi(ssid1, password1);
 
-        createTimelapse(@"C:\rrr\csproektete\dfsdf\ogo.mp4");
+        createTimelapse();
 
 
         async Task takePhoto()
@@ -74,7 +82,6 @@ class Program
 
             //загрузка файла
             var fileUrl = $"{mediaUrl}/{file}";
-            // var fileName = Path.GetFileName(file);
             var localPath = Path.Combine(downloadFolder, fileName);
             var data = await client.GetByteArrayAsync(fileUrl);
             await File.WriteAllBytesAsync(localPath, data);
@@ -153,10 +160,9 @@ class Program
             //количество фото, которые нужно сделать
             return secondsShootingTime / photoDelay;
         }
-        void createTimelapse(string outputFilePath, int outputFps = 25)
+        void createTimelapse(int outputFps = 25)
         {
-            //путь к папке проекта и остальные пути
-            string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..\\..\\.."));
+            //получение путей
             string photosDirectory = Path.Combine(projectRoot, "GoProPhotos");
             string ffmpegPath = Path.Combine(AppContext.BaseDirectory, "ffmpeg.exe");
 
