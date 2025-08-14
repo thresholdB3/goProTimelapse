@@ -24,17 +24,17 @@ class Program
                             .SetBasePath(projectRoot) 
                             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true) 	.Build(); 
 
-        int photoDelay = int.Parse(configuration["photoDelay"]);
-        string baseUrl = configuration["url:baseUrl"];
-        string mediaUrl = configuration["url:mediaUrl"];
-        string folderUrl = configuration["url:folderUrl"];
-        string mediaHtml = configuration["url:mediaHtml"];
-        string downloadFolder = configuration["downloadFolder"];
+        int photoDelay = int.Parse(configuration["Timelaps:photoDelaySeconds"]);
+        string baseUrl = configuration["GoPro:Urls:baseUrl"];
+        string mediaUrl = configuration["GoPro:Urls:mediaUrl"];
+        string folderUrl = configuration["GoPro:Urls:folderUrl"];
+        string mediaHtml = configuration["GoPro:Urls:mediaHtml"];
+        string downloadFolder = configuration["Base:downloadFolder"];
         
-        string ssid1 = configuration["wifi:main:ssid"]; //имя основного wifi
-        string password1 = configuration["wifi:main:password"]; //его пароль
-        string camera_ssid = configuration["wifi:camera:ssid"];
-        string camera_password = configuration["wifi:camera:password"];
+        string ssid1 = configuration["Network:mainSSID"]; //имя основного wifi
+        string password1 = configuration["Network:mainPassword"]; //его пароль
+        string camera_ssid = configuration["GoPro:cameraSSID"];
+        string camera_password = configuration["GoPro:cameraPassword"];
 
 
         ConnectWiFi(camera_ssid, camera_password);
