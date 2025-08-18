@@ -11,6 +11,7 @@ namespace GoProTimelapse
             var settings = Settings.ReadSettings();
             var wlanWorker = new WlanWorker(settings.Network);
             var camera = new GoProCamera(settings);
+            var telegramm = new Telegramm();
 
             wlanWorker.Connect(settings.GoPro.CameraSSID, settings.GoPro.CameraPassword);
             await Task.Delay(3000); //3 секунды на подключение
@@ -38,7 +39,11 @@ namespace GoProTimelapse
 
             wlanWorker.Connect(settings.Network.MainSSID, settings.Network.MainPassword);
 
-            await FFMpegWorker.CreateVideoFromPhotos(photoFiles, settings.Base.DownloadFolder);
+            string outputFileName = DateTime.Now.ToString("ssmmhh.ddMMyyyy") + ".mp4";
+
+            await FFMpegWorker.CreateVideoFromPhotos(photoFiles, settings.Base.DownloadFolder, outputFileName);
+
+            await telegramm.SendVideo(outputFileName, settings.Telegramm.botToken, int.Parse(settings.Telegramm.chatID));
         }
     }
 }

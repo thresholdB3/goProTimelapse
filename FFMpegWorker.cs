@@ -13,6 +13,7 @@ namespace GoProTimelapse
         public static async Task CreateVideoFromPhotos(
             List<string> photos,
             string downloadFolder,
+            string outputFileName,
             int outputFps = 25)
         {
             string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..\\..\\.."));
@@ -21,7 +22,7 @@ namespace GoProTimelapse
             string inputListPath = Path.Combine(AppContext.BaseDirectory, "input.txt");
             File.WriteAllLines(inputListPath, photos.Select(f => $"file '{f.Replace("'", @"'\''")}'"));
 
-            string outputFile = Path.Combine(projectRoot, DateTime.Now.ToString("ssmmhh.ddMMyyyy") + ".mp4");
+            string outputFile = Path.Combine(projectRoot, outputFileName);
             string arguments = $"-f concat -safe 0 -i \"{inputListPath}\" -c:v libx264 -r {outputFps} -pix_fmt yuv420p \"{outputFile}\"";
 
             var process = new Process

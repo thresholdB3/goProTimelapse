@@ -9,6 +9,7 @@ namespace GoProTimelapse
         public GoProSettings GoPro { get; set; }
         public TimelapsSettings Timelaps { get; set; }
         public BaseSettings Base { get; set; }
+        public TelegramSettings Telegramm { get; set; }
 
         //метод для загрузки настроек из JSON
         public static Settings ReadSettings()
@@ -30,6 +31,11 @@ namespace GoProTimelapse
             int seconds = (int)shootingTime.TotalSeconds;
             return seconds / Timelaps.PhotoDelaySeconds;//количество фото, которые нужно сделать
         }
+    }
+    public class TelegramSettings
+    {
+        public string botToken { get; set; }
+        public string chatID { get; set; }
     }
 
     public class NetworkSettings

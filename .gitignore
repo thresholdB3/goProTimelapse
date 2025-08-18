@@ -3,3 +3,4 @@ obj/
 GoProPhotos/
 ffmpeg.exe
 ffprobe.exe
+appsettings.json
