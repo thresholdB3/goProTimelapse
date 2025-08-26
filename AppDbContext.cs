@@ -6,15 +6,11 @@ namespace GoProTimelapse
     {
         public DbSet<User> Users { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            //база данных лежит в файле app.db
-            optionsBuilder.UseSqlite("Data Source=app.db");
-        }
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            //дефолты для bool полей
             modelBuilder.Entity<User>()
                 .Property(u => u.IsAdmin)
                 .HasDefaultValue(false);
@@ -25,4 +21,3 @@ namespace GoProTimelapse
         }
     }
 }
-

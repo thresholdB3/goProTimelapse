@@ -68,10 +68,16 @@ namespace GoProTimelapse
             DeleteUser(user.Id);
 
         }
+        static DbContextOptions<AppDbContext> BuildOptions()
+        {
+            return new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlite("Data Source=app.db")
+                .Options;
+        }
         
         static void CreateUser(User user)
         {
-            using (var db = new AppDbContext())
+            using (var db = new AppDbContext(BuildOptions()))
             {
                 db.Users.Add(user);
                 db.SaveChanges();
@@ -79,19 +85,17 @@ namespace GoProTimelapse
             }
         }
 
-        
         static List<User> GetAllUsers()
         {
-            using (var db = new AppDbContext())
+            using (var db = new AppDbContext(BuildOptions()))
             {
                 return db.Users.ToList();
             }
         }
 
-        
         static void UpdateUser(User user)
         {
-            using (var db = new AppDbContext())
+            using (var db = new AppDbContext(BuildOptions()))
             {
                 db.Users.Update(user);
                 db.SaveChanges();
@@ -99,10 +103,9 @@ namespace GoProTimelapse
             }
         }
 
-        
         static void DeleteUser(int id)
         {
-            using (var db = new AppDbContext())
+            using (var db = new AppDbContext(BuildOptions()))
             {
                 var user = db.Users.FirstOrDefault(u => u.Id == id);
                 if (user != null)

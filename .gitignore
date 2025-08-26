@@ -1,6 +1,11 @@
 bin/
 obj/
 GoProPhotos/
+Migrations/
 ffmpeg.exe
 ffprobe.exe
 appsettings.json
+app.db
+app.db-shm
+app.db-wal
+gopro_timelapse_instructions.md
