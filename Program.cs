@@ -27,24 +27,20 @@ namespace GoProTimelapse
             // int photoCount = settings.GetPhotoCount(timeStart, timeStop);
             int photoCount = 756;
 
-            //cписок для сохранённых локальных файлов
-            var photoFiles = new List<string>();
 
-            for (int i = 0; i < photoCount; i++)
-            {
-                Console.WriteLine($"Съёмка фото {i + 1}/{photoCount}...");
-                await camera.TakePhotoAsync();
-                await camera.DownloadLastPhotoAsync(i.ToString() + ".jpg");
-                photoFiles.Add(Path.Combine(settings.Base.DownloadFolder, i.ToString() + ".jpg"));
-                await Task.Delay(settings.Timelaps.PhotoDelaySeconds - 11);//в коде уже есть задержка на 11 секунд
-                //на самом деле не 11, надо тыкать и исправлять
-            }
+            // for (int i = 0; i < photoCount; i++)
+            // {
+            //     Console.WriteLine($"Съёмка фото {i + 1}/{photoCount}...");
+            //     await camera.TakePhotoAsync();
+            //     await camera.DownloadLastPhotoAsync(i.ToString() + ".jpg");
+            //     photoFiles.Add(Path.Combine(settings.Base.DownloadFolder, i.ToString() + ".jpg"));
+            //     await Task.Delay(settings.Timelaps.PhotoDelaySeconds - 11);//в коде уже есть задержка на 11 секунд
+            //     //на самом деле не 11, надо тыкать и исправлять
+            // }
 
             // wlanWorker.Connect(settings.Network.MainSSID, settings.Network.MainPassword);
 
-            string outputFileName = DateTime.Now.ToString("ssmmhh.ddMMyyyy") + ".mp4";
-
-            await FFMpegWorker.CreateVideoFromPhotos(photoFiles, settings.Base.DownloadFolder, outputFileName);
+            await FFMpegWorker.CreateVideoFromPhotos(settings.Base.DownloadFolder);
 
             // await telegramm.SendVideo(outputFileName, settings.Telegramm.botToken, int.Parse(settings.Telegramm.chatID));
 
