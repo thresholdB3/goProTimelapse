@@ -11,21 +11,42 @@ namespace GoProTimelapse
         static async Task Main(string[] args)
         {
             var settings = Settings.ReadSettings();
+            var telegramBot = new Telegramm(settings.Telegramm.botToken);
+            var worker = new Worker(settings.Telegramm.botToken, settings);
+
+            //Токен отмены, чтобы можно было закрыть оба потока
+            var cts = new CancellationTokenSource();
+
+            var botTask = telegramBot.StartAsync();
+            var workerTask = worker.StartAsync(cts.Token);
+
+            Console.WriteLine("Нажми Enter для выхода...");
+            Console.ReadLine();
+
+            // Отменяем воркер
+            cts.Cancel();
+
+            // Ждём завершения обоих потоков
+            await Task.WhenAll(botTask, workerTask);
+
+
+
+            // var settings = Settings.ReadSettings();
             // var wlanWorker = new WlanWorker(settings.Network);
-            var camera = new GoProCameraFake(settings);
+            // var camera = new GoProCameraFake(settings);
             // var telegramm = new Telegramm();
 
             // wlanWorker.Connect(settings.GoPro.CameraSSID, settings.GoPro.CameraPassword);
             // await Task.Delay(3000); //3 секунды на подключение
-            await camera.SetPhotoModeAsync();
+            // await camera.SetPhotoModeAsync();
 
-            if (!Directory.Exists(settings.Base.DownloadFolder))
-                Directory.CreateDirectory(settings.Base.DownloadFolder);
+            // if (!Directory.Exists(settings.Base.DownloadFolder))
+            //     Directory.CreateDirectory(settings.Base.DownloadFolder);
 
-            DateTime timeStart = DateTime.Now;
-            DateTime timeStop = new DateTime(2025, 8, 30, 15, 30, 0);
+            // DateTime timeStart = DateTime.Now;
+            // DateTime timeStop = new DateTime(2025, 8, 30, 15, 30, 0);
             // int photoCount = settings.GetPhotoCount(timeStart, timeStop);
-            int photoCount = 756;
+            // int photoCount = 756;
 
 
             // for (int i = 0; i < photoCount; i++)
@@ -40,78 +61,10 @@ namespace GoProTimelapse
 
             // wlanWorker.Connect(settings.Network.MainSSID, settings.Network.MainPassword);
 
-            await FFMpegWorker.CreateVideoFromPhotos(settings.Base.DownloadFolder);
+            // await FFMpegWorker.CreateVideoFromPhotos(settings.Base.DownloadFolder);
 
-            // await telegramm.SendVideo(outputFileName, settings.Telegramm.botToken, int.Parse(settings.Telegramm.chatID));
-
-            // Пример работы с CRUD
-            // var user = new User
-            // {
-            //     Username = "ogo",
-            //     FirstName = "Petya",
-            //     LastName = "Volkov",
-            //     RegisteredAt = DateTime.Now
-            // };
-
-            // CreateUser(user);
-            // var allUsers = GetAllUsers();
-            // Console.WriteLine("Пользователи:");
-            // foreach (var u in allUsers)
-            //     Console.WriteLine($"{u.Id}: {u.Username} ({u.FirstName} {u.LastName})");
-
-            // user.FirstName = "Ne_Petya";
-            // UpdateUser(user);
-
-            // DeleteUser(user.Id);
+            // await telegramm.SendVideo(outputFileName, settings.Telegramm.botToken, int.Parse(settings.Telegramm.chatID))
 
         }
-        // static DbContextOptions<AppDbContext> BuildOptions()
-        // {
-        //     return new DbContextOptionsBuilder<AppDbContext>()
-        //         .UseSqlite("Data Source=app.db")
-        //         .Options;
-        // }
-        
-        // static void CreateUser(User user)
-        // {
-        //     using (var db = new AppDbContext(BuildOptions()))
-        //     {
-        //         db.Users.Add(user);
-        //         db.SaveChanges();
-        //         Console.WriteLine($"Добавлен пользователь {user.Username}");
-        //     }
-        // }
-
-        // static List<User> GetAllUsers()
-        // {
-        //     using (var db = new AppDbContext(BuildOptions()))
-        //     {
-        //         return db.Users.ToList();
-        //     }
-        // }
-
-        // static void UpdateUser(User user)
-        // {
-        //     using (var db = new AppDbContext(BuildOptions()))
-        //     {
-        //         db.Users.Update(user);
-        //         db.SaveChanges();
-        //         Console.WriteLine($"Обновлён пользователь {user.Username}");
-        //     }
-        // }
-
-        // static void DeleteUser(int id)
-        // {
-        //     using (var db = new AppDbContext(BuildOptions()))
-        //     {
-        //         var user = db.Users.FirstOrDefault(u => u.Id == id);
-        //         if (user != null)
-        //         {
-        //             db.Users.Remove(user);
-        //             db.SaveChanges();
-        //             Console.WriteLine($"Удалён пользователь {user.Username}");
-        //         }
-        //     }
-        // }
     }
 }
