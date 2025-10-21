@@ -21,14 +21,13 @@ namespace GoProTimelapse
         public async Task StartAsync()
         {
             var me = await _bot.GetMe();
-            Console.WriteLine("Бот запущен");
 
             _bot.StartReceiving(
                 HandleUpdateAsync,
                 HandleErrorAsync
             );
 
-            Console.ReadLine(); // держим процесс
+            Console.ReadLine();
         }
 
         //Основной обработчик сообщений
@@ -84,7 +83,7 @@ namespace GoProTimelapse
             }
         }
 
-        // 📸 Обработка команды /photo
+        //Обработка команды /photo
         private async Task HandlePhotoCommand(int chatId, Message message)
         {
             var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
@@ -95,7 +94,6 @@ namespace GoProTimelapse
                 return;
             }
 
-            //Запись chatId в Parameters в виде JSON
             var parametersJson = $"{{\"chatId\": {chatId}}}";
 
             var task = new TaskItem
@@ -126,7 +124,7 @@ namespace GoProTimelapse
         //Обработчик ошибок Telegram API
         private Task HandleErrorAsync(ITelegramBotClient bot, Exception exception, CancellationToken token)
         {
-            Console.WriteLine($"Ошибка в Telegram боте: {exception.Message}");
+            Console.WriteLine($"Ошибка в боте: {exception.Message}");
             return Task.CompletedTask;
         }
     }

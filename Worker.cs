@@ -19,12 +19,10 @@ namespace GoProTimelapse
 
         public async Task StartAsync(CancellationToken token)
         {
-            Console.WriteLine("Воркeр запущен");
-
             while (!token.IsCancellationRequested)
             {
                 await ProcessPendingTasks();
-                await Task.Delay(TimeSpan.FromSeconds(2), token);
+                await Task.Delay(2000, token);
             }
         }
 
@@ -36,29 +34,16 @@ namespace GoProTimelapse
 
             foreach (var task in newTasks)
             {
-                Console.WriteLine($"Обработка задачи #{task.Id} ({task.Type})...");
-
                 task.Status = TaskStatus.InProgress;
                 task.StartedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
 
-                try
-                {
-                    if (task.Type == TaskType.Photo)
-                        await HandlePhotoTask(task);
+                if (task.Type == TaskType.Photo)
+                    await HandlePhotoTask(task);
 
-                    task.Status = TaskStatus.Completed;
-                    task.FinishedAt = DateTime.UtcNow;
-                    await _db.SaveChangesAsync();
-
-                    Console.WriteLine($"Задача #{task.Id} выполнена");
-                }
-                catch (Exception ex)
-                {
-                    task.Status = TaskStatus.Failed;
-                    await _db.SaveChangesAsync();
-                    Console.WriteLine($"Ошибка при выполнении задачи #{task.Id}: {ex.Message}");
-                }
+                task.Status = TaskStatus.Completed;
+                task.FinishedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
             }
         }
 
@@ -66,23 +51,10 @@ namespace GoProTimelapse
         {
             //Достаём chatId из JSON в Parameters
             long chatId;
-            try
-            {
-                var parameters = JsonDocument.Parse(task.Parameters);
-                chatId = parameters.RootElement.GetProperty("chatId").GetInt64();
-            }
-            catch (Exception)
-            {
-                Console.WriteLine($"Невозможно прочитать chatId у задачи #{task.Id}");
-                return;
-            }
+            var parameters = JsonDocument.Parse(task.Parameters);
+            chatId = parameters.RootElement.GetProperty("chatId").GetInt64();
 
             var user = await _db.Users.FindAsync(task.UserId);
-            if (user == null)
-            {
-                Console.WriteLine($"Не найден пользователь для задачи #{task.Id}");
-                return;
-            }
 
             await _camera.SetPhotoModeAsync();
             await _camera.TakePhotoAsync();
