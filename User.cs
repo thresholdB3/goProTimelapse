@@ -11,6 +11,8 @@ namespace GoProTimelapse
         public bool IsAdmin { get; set; } = false;
         public DateTime RegisteredAt { get; set; }
         public bool SunsetSubscribtion { get; set; } = false;
+
+        public long TGUserId { get; set; }
     }
 }
 

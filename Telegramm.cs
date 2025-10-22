@@ -68,7 +68,8 @@ namespace GoProTimelapse
                     Username = username,
                     FirstName = message.Chat.FirstName ?? "",
                     LastName = message.Chat.LastName ?? "",
-                    RegisteredAt = DateTime.UtcNow
+                    RegisteredAt = DateTime.UtcNow,
+                    TGUserId = chatId
                 };
 
                 _db.Users.Add(user);
@@ -94,18 +95,16 @@ namespace GoProTimelapse
                 return;
             }
 
-            var parametersJson = $"{{\"chatId\": {chatId}}}";
-
             var task = new TaskItem
             {
                 Type = TaskType.Photo,
                 Status = TaskStatus.Created,
-                Parameters = parametersJson,
+                ChatId = chatId,
                 UserId = user.Id,
                 CreatedAt = DateTime.UtcNow
             };
-
             _db.Tasks.Add(task);
+
             await _db.SaveChangesAsync();
 
             await _bot.SendMessage(chatId, "📸 Задача на фото создана. Сейчас обработаю!");

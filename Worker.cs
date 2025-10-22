@@ -49,11 +49,6 @@ namespace GoProTimelapse
 
         private async Task HandlePhotoTask(TaskItem task)
         {
-            //Достаём chatId из JSON в Parameters
-            long chatId;
-            var parameters = JsonDocument.Parse(task.Parameters);
-            chatId = parameters.RootElement.GetProperty("chatId").GetInt64();
-
             var user = await _db.Users.FindAsync(task.UserId);
 
             await _camera.SetPhotoModeAsync();
@@ -62,7 +57,7 @@ namespace GoProTimelapse
             Console.WriteLine($"Отправка фото пользователю {user.Username}");
 
             await using var stream = File.OpenRead(@"GoProPhotos\0.jpg");
-            await _bot.SendPhoto(chatId, stream, caption: "📸 Вот твоё фото!");
+            await _bot.SendPhoto(task.ChatId, stream, caption: "📸 Вот твоё фото!");
         }
     }
 }

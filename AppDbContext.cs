@@ -14,10 +14,9 @@ namespace GoProTimelapse
             
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            // ВАЖНО: чтобы не перезаписать уже настроенный контекст
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlite("Data Source=app.db"); // 👈 укажи свой путь при необходимости
+                optionsBuilder.UseSqlite("Data Source=app.db");
             }
         }
 
@@ -30,6 +29,10 @@ namespace GoProTimelapse
             modelBuilder.Entity<User>()
                 .Property(u => u.SunsetSubscribtion)
                 .HasDefaultValue(false);
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.TGUserId)
+                .IsRequired();
 
             modelBuilder.Entity<TaskItem>(entity =>
             {
@@ -56,6 +59,9 @@ namespace GoProTimelapse
                 entity.Property(t => t.StartedAt);
                 entity.Property(t => t.FinishedAt);
                 entity.Property(t => t.ScheduledAt);
+                entity.Property(t => t.ChatId);
+                entity.Property(t => t.UserId);
+                entity.Property(t => t.Parameters);
             });
         }
     }
