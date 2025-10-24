@@ -20,13 +20,14 @@ namespace GoProTimelapse
             var botTask = telegramBot.StartAsync();
             var workerTask = worker.StartAsync(cts.Token);
 
+
             Console.WriteLine("Нажми Enter для выхода...");
             Console.ReadLine();
 
-            // Отменяем воркер
+            //Отменяем воркер
             cts.Cancel();
 
-            // Ждём завершения обоих потоков
+            //Ждём завершения обоих потоков
             await Task.WhenAll(botTask, workerTask);
 
 

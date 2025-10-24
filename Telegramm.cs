@@ -49,6 +49,10 @@ namespace GoProTimelapse
                     await HandlePhotoCommand(chatId, message);
                     break;
 
+                case "/scheduledPhoto":
+                    await CreateScheduledPhotoCommand(DateTime.UtcNow.AddMinutes(2), message, chatId);
+                    break;
+
                 default:
                     await bot.SendMessage(chatId, "Не понял команду");
                     break;
@@ -108,6 +112,26 @@ namespace GoProTimelapse
             await _db.SaveChangesAsync();
 
             await _bot.SendMessage(chatId, "📸 Задача на фото создана. Сейчас обработаю!");
+        }
+
+        public async Task CreateScheduledPhotoCommand(DateTime scheduledTime, Message message, int chatId)
+        {
+            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                return;
+            }
+            var task = new TaskItem
+            {
+                Type = TaskType.Photo,
+                Status = TaskStatus.Created,
+                CreatedAt = DateTime.UtcNow,
+                ScheduledAt = scheduledTime
+            };
+            _db.Tasks.Add(task);
+            await _db.SaveChangesAsync();
         }
 
         //Отправка видео
