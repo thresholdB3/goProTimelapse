@@ -50,7 +50,7 @@ namespace GoProTimelapse
                     break;
 
                 case "/scheduledPhoto":
-                    await CreateScheduledPhotoCommand(DateTime.UtcNow.AddMinutes(2), message, chatId);
+                    await CreateScheduledPhotoCommand(DateTime.UtcNow.AddMinutes(1), message, chatId);
                     break;
 
                 default:

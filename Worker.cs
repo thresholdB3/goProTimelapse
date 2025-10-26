@@ -34,19 +34,25 @@ namespace GoProTimelapse
 
             foreach (var task in newTasks)
             {
-                if ((task.ScheduledAt == null) || (task.ScheduledAt < DateTime.UtcNow))
+                task.Status = TaskStatus.InProgress;
+                task.StartedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+
+                if (task.Type == TaskType.Photo)
                 {
-                    task.Status = TaskStatus.InProgress;
-                    task.StartedAt = DateTime.UtcNow;
-                    await _db.SaveChangesAsync();
-
-                    if (task.Type == TaskType.Photo)
+                    if (task.ScheduledAt != null)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(task.ScheduledAt.Value - DateTime.UtcNow);
+                            await HandleScheduledPhotoTask(task);
+                        });
+                    }
+                    else
+                    {
                         await HandlePhotoTask(task);
-
-                    task.Status = TaskStatus.Completed;
-                    task.FinishedAt = DateTime.UtcNow;
-                    await _db.SaveChangesAsync();
-                } 
+                    }
+                }
             }
         }
 
@@ -54,29 +60,34 @@ namespace GoProTimelapse
         {
             await using var stream = File.OpenRead(@"GoProPhotos\345.jpg");
 
-            if (task.ChatId == null)
+            var user = await _db.Users.FindAsync(task.UserId);
+
+            await _camera.SetPhotoModeAsync();
+            await _camera.TakePhotoAsync();
+
+            Console.WriteLine($"Отправка фото пользователю {task.ChatId}");
+
+            await _bot.SendPhoto(task.ChatId, stream, caption: "📸 Вот твоё фото!");
+            task.Status = TaskStatus.Completed;
+            task.FinishedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+
+        private async Task HandleScheduledPhotoTask(TaskItem task)
+        {
+            await using var stream = File.OpenRead(@"GoProPhotos\345.jpg");
+            var subscribedUsers = await _db.Users
+                .Where(u => u.SunsetSubscribtion == true) //ПОМЕНЯТЬ НА TRUEEE!!!! 
+                .ToListAsync();
+
+            foreach (var user in subscribedUsers)
             {
-                var subscribedUsers = await _db.Users
-                    .Where(u => u.SunsetSubscribtion == true)
-                    .ToListAsync();
-
-                foreach (var user in subscribedUsers)
-                {
-                    await _bot.SendPhoto(user.TGUserId, stream, caption: "📸 Запланированное фото!");
-                    Console.WriteLine($"Отправлено фото пользователю {user.Username}");
-                }
+                await _bot.SendPhoto(user.TGUserId, stream, caption: "📸 Запланированное фото!");
+                Console.WriteLine($"Отправлено фото пользователю {user.Username}");
             }
-            else
-            {
-                var user = await _db.Users.FindAsync(task.UserId);
-
-                await _camera.SetPhotoModeAsync();
-                await _camera.TakePhotoAsync();
-
-                Console.WriteLine($"Отправка фото пользователю {user.Username}");
-
-                await _bot.SendPhoto(task.ChatId, stream, caption: "📸 Вот твоё фото!");
-            }
+            task.Status = TaskStatus.Completed;
+            task.FinishedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
         }
     }
 }
