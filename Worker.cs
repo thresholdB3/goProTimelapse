@@ -9,6 +9,7 @@ namespace GoProTimelapse
         private readonly AppDbContext _db;
         private readonly TelegramBotClient _bot;
         private readonly GoProCameraFake _camera;
+        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
 
         public Worker(string botToken, Settings settings)
         {
@@ -17,17 +18,24 @@ namespace GoProTimelapse
             _camera = new GoProCameraFake(settings);
         }
 
+        public static async Task NotifyNewTask()
+        {
+            _semaphore.Release();
+        }
+
         public async Task StartAsync(CancellationToken token)
         {
             while (!token.IsCancellationRequested)
             {
+                await _semaphore.WaitAsync(token);
+                Console.WriteLine("ogo");
                 await ProcessPendingTasks();
-                await Task.Delay(2000, token);
             }
         }
 
         private async Task ProcessPendingTasks()
         {
+            Console.WriteLine("ogo2");
             var newTasks = await _db.Tasks
                 .Where(t => t.Status == TaskStatus.Created)
                 .ToListAsync();

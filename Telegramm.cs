@@ -112,6 +112,8 @@ namespace GoProTimelapse
             await _db.SaveChangesAsync();
 
             await _bot.SendMessage(chatId, "📸 Задача на фото создана. Сейчас обработаю!");
+
+            await Worker.NotifyNewTask();
         }
 
         public async Task CreateScheduledPhotoCommand(DateTime scheduledTime, Message message, int chatId)
@@ -132,6 +134,8 @@ namespace GoProTimelapse
             };
             _db.Tasks.Add(task);
             await _db.SaveChangesAsync();
+
+            await Worker.NotifyNewTask();
         }
 
         //Отправка видео
