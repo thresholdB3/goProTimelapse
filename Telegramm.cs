@@ -49,8 +49,16 @@ namespace GoProTimelapse
                     await HandlePhotoCommand(chatId, message);
                     break;
 
-                case "/scheduledPhoto":
+                case "/scheduledphoto":
                     await CreateScheduledPhotoCommand(DateTime.UtcNow.AddMinutes(1), message, chatId);
+                    break;
+
+                case "/subscribe":
+                    await Subscribe(chatId, message);
+                    break;
+                
+                case "/unsubscribe":
+                    await Unsubscribe(chatId, message);
                     break;
 
                 default:
@@ -146,6 +154,48 @@ namespace GoProTimelapse
 
             await using Stream stream = File.OpenRead($"./{videoName}");
             await bot.SendVideo(chatID, stream);
+        }
+
+        private async Task Subscribe(int chatId, Message message)
+        {
+            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                return;
+            }
+
+            if (user.SunsetSubscribtion)
+            {
+                await _bot.SendMessage(chatId, "Ты уже подписан:)");
+                return;
+            }
+
+            user.SunsetSubscribtion = true;
+            await _db.SaveChangesAsync();
+            await _bot.SendMessage(chatId, "Подписка на таймлапс оформлена!");
+        }
+
+        private async Task Unsubscribe(int chatId, Message message)
+        {
+            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                return;
+            }
+
+            if (!user.SunsetSubscribtion)
+            {
+                await _bot.SendMessage(chatId, "Ты не подписан на таймлапс");
+                return;
+            }
+
+            user.SunsetSubscribtion = false;
+            await _db.SaveChangesAsync();
+            await _bot.SendMessage(chatId, "Подписка на таймлапс отменена:(");
         }
 
         //Обработчик ошибок Telegram API

@@ -13,12 +13,14 @@ namespace GoProTimelapse
             var settings = Settings.ReadSettings();
             var telegramBot = new Telegramm(settings.Telegramm.botToken);
             var worker = new Worker(settings.Telegramm.botToken, settings);
+            var sunsetPlanner = new SunsetPlanner();
 
             //Токен отмены, чтобы можно было закрыть оба потока
             var cts = new CancellationTokenSource();
 
             var botTask = telegramBot.StartAsync();
             var workerTask = worker.StartAsync(cts.Token);
+            var sunsetPlannerTask = sunsetPlanner.StartAsync(cts.Token);
 
 
             Console.WriteLine("Нажми Enter для выхода...");
@@ -28,7 +30,9 @@ namespace GoProTimelapse
             cts.Cancel();
 
             //Ждём завершения обоих потоков
-            await Task.WhenAll(botTask, workerTask);
+            await Task.WhenAll(botTask, workerTask, sunsetPlannerTask);
+
+            
 
 
 
