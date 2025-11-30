@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Events;
 
 namespace GoProTimelapse
 {
@@ -10,27 +12,66 @@ namespace GoProTimelapse
     {
         static async Task Main(string[] args)
         {
-            var settings = Settings.ReadSettings();
-            var telegramBot = new Telegramm(settings.Telegramm.botToken);
-            var worker = new Worker(settings.Telegramm.botToken, settings);
-            var sunsetPlanner = new SunsetPlanner();
+            
 
-            //Токен отмены, чтобы можно было закрыть оба потока
-            var cts = new CancellationTokenSource();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()                   
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            #if DEBUG
+                .MinimumLevel.Debug()                            
+            #endif
+                .Enrich.FromLogContext()
+                .Enrich.WithThreadId()
+                .Enrich.WithMachineName()
+                .Enrich.WithEnvironmentName()
+                .WriteTo.Console(
+                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [Thread:{ThreadId}] {Message:lj} <{SourceContext}>{NewLine}{Exception}")
+                    //потом вынесу в appsettings
+                .WriteTo.File(
+                    path: "Logs/log-.txt",
+                    rollingInterval: RollingInterval.Day,
+                    fileSizeLimitBytes: 10_485_760, // 10 МБ
+                    retainedFileCountLimit: 31,
+                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] [Thread:{ThreadId}] {MachineName} {SourceContext} | {Message:lj}{NewLine}{Exception}")
+                    //это тоже
+                .CreateBootstrapLogger();
+            //логи пока кривовато, потом нормально доделаю
 
-            var botTask = telegramBot.StartAsync();
-            var workerTask = worker.StartAsync(cts.Token);
-            var sunsetPlannerTask = sunsetPlanner.StartAsync(cts.Token);
+            try
+            {
+                Log.Information("Запуск приложения");
 
+                var settings = Settings.ReadSettings();
+                var telegramBot = new Telegramm(settings.Telegramm.botToken);
+                var worker = new Worker(settings.Telegramm.botToken, settings);
+                var sunsetPlanner = new SunsetPlanner();
 
-            Console.WriteLine("Нажми Enter для выхода...");
-            Console.ReadLine();
+                var cts = new CancellationTokenSource();
 
-            //Отменяем воркер
-            cts.Cancel();
+                Log.Information("Запускаем все задачи...");
+                var botTask = telegramBot.StartAsync();
+                var workerTask = worker.StartAsync(cts.Token);
+                var sunsetPlannerTask = sunsetPlanner.StartAsync(cts.Token);
 
-            //Ждём завершения обоих потоков
-            await Task.WhenAll(botTask, workerTask, sunsetPlannerTask);
+                Console.WriteLine("Нажми Enter для выхода...");
+                Console.ReadLine();
+
+                Log.Information("Останавливаем приложение...");
+                cts.Cancel();
+
+                await Task.WhenAll(botTask, workerTask, sunsetPlannerTask);
+
+                Log.Information("Все задачи завершены. Выход.");
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Приложение упало с необработанным исключением");
+                throw;
+            }
+            finally
+            {
+                await Log.CloseAndFlushAsync(); 
+            }
 
             
 

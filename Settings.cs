@@ -7,7 +7,7 @@ namespace GoProTimelapse
     {
         public NetworkSettings Network { get; set; }
         public GoProSettings GoPro { get; set; }
-        public TimelapsSettings Timelaps { get; set; }
+        public TimelapsSettings Timelaps { get; set; } //??
         public BaseSettings Base { get; set; }
         public TelegramSettings Telegramm { get; set; }
 
@@ -24,13 +24,7 @@ namespace GoProTimelapse
             configuration.Bind(settings);
             return settings;
         }
-        public int GetPhotoCount(DateTime startTime, DateTime stopTime)
-        {
-            TimeSpan shootingTime = stopTime - startTime;
-            Console.WriteLine($"Время съёмки: {shootingTime}");
-            int seconds = (int)shootingTime.TotalSeconds;
-            return seconds / Timelaps.PhotoDelaySeconds;//количество фото, которые нужно сделать
-        }
+
     }
     public class TelegramSettings
     {

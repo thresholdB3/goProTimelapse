@@ -3,6 +3,9 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.IO;
+using Serilog;
+using Serilog.Events;
+using System.Diagnostics;
 
 namespace GoProTimelapse
 {
@@ -10,6 +13,7 @@ namespace GoProTimelapse
     {
         private readonly TelegramBotClient _bot;
         private readonly AppDbContext _db;
+        private static readonly ILogger Log = Serilog.Log.ForContext<Telegramm>();
 
         public Telegramm(string botToken)
         {
@@ -20,6 +24,7 @@ namespace GoProTimelapse
         //Запуск слушателя
         public async Task StartAsync()
         {
+            Log.Information("Запуск бота...");
             var me = await _bot.GetMe();
 
             _bot.StartReceiving(
@@ -33,175 +38,232 @@ namespace GoProTimelapse
         //Основной обработчик сообщений
         private async Task HandleUpdateAsync(ITelegramBotClient bot, Update update, CancellationToken token)
         {
-            if (update.Type != UpdateType.Message || update.Message == null)
-                return;
-
-            var message = update.Message;
-            var chatId = (int)message.Chat.Id;
-
-            switch (message.Text)
+            try
             {
-                case "/start":
-                    await HandleStartCommand(chatId, message);
-                    break;
-
-                case "/photo":
-                    await HandlePhotoCommand(chatId, message);
-                    break;
-
-                case "/scheduledphoto":
-                    await CreateScheduledPhotoCommand(DateTime.UtcNow.AddMinutes(1), message, chatId);
-                    break;
-
-                case "/subscribe":
-                    await Subscribe(chatId, message);
-                    break;
+                if (update.Type != UpdateType.Message || update.Message == null)
+                    return;
                 
-                case "/unsubscribe":
-                    await Unsubscribe(chatId, message);
-                    break;
+                var message = update.Message;
+                var chatId = (int)message.Chat.Id;
 
-                default:
-                    await bot.SendMessage(chatId, "Не понял команду");
-                    break;
+                Log.Debug("Обработка сообщения от пользователя {ChatId}", chatId);
+
+                switch (message.Text)
+                {
+                    case "/start":
+                        await HandleStartCommand(chatId, message);
+                        break;
+
+                    case "/photo":
+                        await HandlePhotoCommand(chatId, message);
+                        break;
+
+                    case "/scheduledphoto":
+                        await CreateScheduledPhotoCommand(DateTime.UtcNow.AddMinutes(1), message, chatId);
+                        break;
+
+                    case "/subscribe":
+                        await Subscribe(chatId, message);
+                        break;
+                    
+                    case "/unsubscribe":
+                        await Unsubscribe(chatId, message);
+                        break;
+
+                    default:
+                        await bot.SendMessage(chatId, "Не понял команду");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка при обработке соо");
             }
         }
 
         //Обработка команды /start
         private async Task HandleStartCommand(int chatId, Message message)
         {
-            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
-
-            if (user == null)
+            try
             {
-                user = new User
+                Log.Debug("Обработка /start");
+                var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+
+                if (user == null)
                 {
-                    Username = username,
-                    FirstName = message.Chat.FirstName ?? "",
-                    LastName = message.Chat.LastName ?? "",
-                    RegisteredAt = DateTime.UtcNow,
-                    TGUserId = chatId
-                };
+                    user = new User
+                    {
+                        Username = username,
+                        FirstName = message.Chat.FirstName ?? "",
+                        LastName = message.Chat.LastName ?? "",
+                        RegisteredAt = DateTime.UtcNow,
+                        TGUserId = chatId
+                    };
 
-                _db.Users.Add(user);
-                await _db.SaveChangesAsync();
+                    _db.Users.Add(user);
+                    await _db.SaveChangesAsync();
 
-                await _bot.SendMessage(chatId,
-                    "👋 Привет! Ты зарегистрирован. Напиши /photo чтобы сделать тестовое фото.");
+                    await _bot.SendMessage(chatId,
+                        "👋 Привет! Ты зарегистрирован. Напиши /photo чтобы сделать тестовое фото.");
+                    
+                    Log.Information("Добавлен пользователь {Username}", username);
+                }
+                else
+                {
+                    await _bot.SendMessage(chatId, "Ты уже зарегистрирован 😉");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                await _bot.SendMessage(chatId, "Ты уже зарегистрирован 😉");
+                Log.Error(ex, "Ошибка при обработке /start");
             }
         }
 
         //Обработка команды /photo
         private async Task HandlePhotoCommand(int chatId, Message message)
         {
-            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (user == null)
+            try
             {
-                await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
-                return;
+                Log.Debug("Обработка /photo");
+                var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+                if (user == null)
+                {
+                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    return;
+                }
+
+                var task = new TaskItem
+                {
+                    Type = TaskType.Photo,
+                    Status = TaskStatus.Created,
+                    ChatId = chatId,
+                    UserId = user.Id,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _db.Tasks.Add(task);
+                await _db.SaveChangesAsync();
+
+                await _bot.SendMessage(chatId, "📸 Задача на фото создана. Сейчас обработаю!");
+                Log.Debug("Добавлена задача фото пользователем {Username}", username);
+
+                await Worker.NotifyNewTask();
             }
-
-            var task = new TaskItem
+            catch (Exception ex)
             {
-                Type = TaskType.Photo,
-                Status = TaskStatus.Created,
-                ChatId = chatId,
-                UserId = user.Id,
-                CreatedAt = DateTime.UtcNow
-            };
-            _db.Tasks.Add(task);
-
-            await _db.SaveChangesAsync();
-
-            await _bot.SendMessage(chatId, "📸 Задача на фото создана. Сейчас обработаю!");
-
-            await Worker.NotifyNewTask();
+                Log.Error(ex, "Ошибка при обработке /photo");
+            }
         }
 
         public async Task CreateScheduledPhotoCommand(DateTime scheduledTime, Message message, int chatId)
         {
-            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (user == null)
+            try
             {
-                await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
-                return;
-            }
-            var task = new TaskItem
-            {
-                Type = TaskType.Photo,
-                Status = TaskStatus.Created,
-                CreatedAt = DateTime.UtcNow,
-                ScheduledAt = scheduledTime
-            };
-            _db.Tasks.Add(task);
-            await _db.SaveChangesAsync();
+                Log.Debug("Обработка /scheduledphoto");
+                var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+                if (user == null)
+                {
+                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    return;
+                }
+                var task = new TaskItem
+                {
+                    Type = TaskType.Photo,
+                    Status = TaskStatus.Created,
+                    CreatedAt = DateTime.UtcNow,
+                    ScheduledAt = scheduledTime
+                };
+                _db.Tasks.Add(task);
+                await _db.SaveChangesAsync();
 
-            await Worker.NotifyNewTask();
+                Log.Debug("Добавлена задача запланированное фото пользователем {Username}", username);
+
+                await Worker.NotifyNewTask();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка при обработке /scheduledphoto");
+            }
         }
 
         //Отправка видео
-        public async Task SendVideo(string videoName, string botToken, int chatID)
-        {
-            using var cts = new CancellationTokenSource();
-            var bot = new TelegramBotClient(botToken, cancellationToken: cts.Token);
+        // public async Task SendVideo(string videoName, string botToken, int chatID)
+        // {
+        //     using var cts = new CancellationTokenSource();
+        //     var bot = new TelegramBotClient(botToken, cancellationToken: cts.Token);
 
-            await using Stream stream = File.OpenRead($"./{videoName}");
-            await bot.SendVideo(chatID, stream);
-        }
+        //     await using Stream stream = File.OpenRead($"./{videoName}");
+        //     await bot.SendVideo(chatID, stream);
+        // }
 
         private async Task Subscribe(int chatId, Message message)
         {
-            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (user == null)
+            try
             {
-                await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
-                return;
-            }
+                Log.Debug("Обработка /subscribe");
+                var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+                if (user == null)
+                {
+                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    return;
+                }
 
-            if (user.SunsetSubscribtion)
+                if (user.SunsetSubscribtion)
+                {
+                    await _bot.SendMessage(chatId, "Ты уже подписан:)");
+                    return;
+                }
+
+                user.SunsetSubscribtion = true;
+                await _db.SaveChangesAsync();
+                await _bot.SendMessage(chatId, "Подписка на таймлапс оформлена!");
+
+                Log.Debug("Пользователь {Username} подписался", username);
+            }
+            catch (Exception ex)
             {
-                await _bot.SendMessage(chatId, "Ты уже подписан:)");
-                return;
+                Log.Error(ex, "Ошибка при обработке /subscribe");
             }
-
-            user.SunsetSubscribtion = true;
-            await _db.SaveChangesAsync();
-            await _bot.SendMessage(chatId, "Подписка на таймлапс оформлена!");
         }
 
         private async Task Unsubscribe(int chatId, Message message)
         {
-            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (user == null)
+            try
             {
-                await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
-                return;
-            }
+                Log.Debug("Обработка /unsubscribe");
+                var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+                if (user == null)
+                {
+                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    return;
+                }
 
-            if (!user.SunsetSubscribtion)
+                if (!user.SunsetSubscribtion)
+                {
+                    await _bot.SendMessage(chatId, "Ты не подписан на таймлапс");
+                    return;
+                }
+
+                user.SunsetSubscribtion = false;
+                await _db.SaveChangesAsync();
+                await _bot.SendMessage(chatId, "Подписка на таймлапс отменена:(");
+
+                Log.Debug("Пользователь {Username} отписался", username);
+            }
+            catch (Exception ex)
             {
-                await _bot.SendMessage(chatId, "Ты не подписан на таймлапс");
-                return;
+                Log.Error(ex, "Ошибка при обработке /unsubscribe");
             }
-
-            user.SunsetSubscribtion = false;
-            await _db.SaveChangesAsync();
-            await _bot.SendMessage(chatId, "Подписка на таймлапс отменена:(");
         }
 
         //Обработчик ошибок Telegram API
         private Task HandleErrorAsync(ITelegramBotClient bot, Exception exception, CancellationToken token)
         {
-            Console.WriteLine($"Ошибка в боте: {exception.Message}");
+            Log.Error(exception.Message, "Ошибка в боте :(");
             return Task.CompletedTask;
         }
     }

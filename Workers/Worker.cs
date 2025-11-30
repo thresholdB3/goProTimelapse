@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Telegram.Bot;
+using Serilog;
+using Serilog.Events;
 
 namespace GoProTimelapse
 {
@@ -11,6 +13,7 @@ namespace GoProTimelapse
         private readonly GoProCameraFake _camera;
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
         private readonly Settings _settings;
+        private static readonly ILogger Log = Serilog.Log.ForContext<Worker>();
 
         public Worker(string botToken, Settings settings)
         {
@@ -23,107 +26,156 @@ namespace GoProTimelapse
         public static async Task NotifyNewTask()
         {
             _semaphore.Release();
+            Log.Debug("Уведомление о новой задаче");
         }
 
         public async Task StartAsync(CancellationToken token)
         {
+            Log.Information("Запуск воркера...");
             while (!token.IsCancellationRequested)
             {
                 await _semaphore.WaitAsync(token);
-                Console.WriteLine("Воркер запущен");
                 await ProcessPendingTasks();
             }
         }
 
         private async Task ProcessPendingTasks()
         {
-            Console.WriteLine("Задача обрабатывается...");
-            var newTasks = await _db.Tasks
-                .Where(t => t.Status == TaskStatus.Created)
-                .ToListAsync();
-
-            foreach (var task in newTasks)
+            Log.Debug("Обработка задачи...");
+            try
             {
-                task.Status = TaskStatus.InProgress;
-                task.StartedAt = DateTime.UtcNow;
-                await _db.SaveChangesAsync();
+                var newTasks = await _db.Tasks
+                    .Where(t => t.Status == TaskStatus.Created)
+                    .ToListAsync();
 
-                if (task.Type == TaskType.Photo)
+                foreach (var task in newTasks)
                 {
-                    if (task.ScheduledAt != null)
+                    task.Status = TaskStatus.InProgress;
+                    task.StartedAt = DateTimeOffset.Now;
+                    await _db.SaveChangesAsync();
+
+                    if (task.Type == TaskType.Photo)
                     {
-                        _ = Task.Run(async () =>
+                        if (task.ScheduledAt != null)
                         {
-                            await Task.Delay(task.ScheduledAt.Value - DateTimeOffset.Now);
-                            await HandleScheduledPhotoTask(task);
-                        });
-                    }
-                    else
+                            _ = Task.Run(async () =>
+                            {
+                                var photoDelay = task.ScheduledAt.Value - DateTimeOffset.Now;
+                                await Task.Delay(photoDelay);
+                                Log.Debug("Фото отложено на {PhotoDelay} милисекунд", photoDelay);
+                                await HandleScheduledPhotoTask(task);
+                            });
+                        }
+                        else
+                        {
+                            await HandlePhotoTask(task);
+                        }
+                    }else if (task.Type == TaskType.Timelapse)
                     {
-                        await HandlePhotoTask(task);
+                        var timelapseDelay = task.ScheduledAt.Value - DateTimeOffset.Now;
+                        // await Task.Delay(timelapseDelay);
+                        Log.Debug("Таймлапс отложен(нет) на {TimelapseDelay} милисекунд", timelapseDelay);
+                        await HandleTimelapse(task);
                     }
-                }else if (task.Type == TaskType.Timelapse)
-                {
-                    await Task.Delay(task.ScheduledAt.Value - DateTimeOffset.Now);
-                    await HandleTimelapse(task);
                 }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка при обработке задачи");
             }
         }
 
         private async Task HandlePhotoTask(TaskItem task)
         {
-            await using var stream = File.OpenRead(@"GoProPhotos\345.jpg");
+            Log.Debug("Обработка фото...");
+            try
+            {
+                await using var stream = File.OpenRead(@"GoProPhotos\1.jpg");
 
-            // await _camera.SetPhotoModeAsync();
-            // await _camera.TakePhotoAsync();
+                // await _camera.SetPhotoModeAsync();
+                // await _camera.TakePhotoAsync();
 
-            await _camera.TakePhoto();
+                await _camera.TakePhoto();
 
-            Console.WriteLine($"Отправка фото пользователю {task.ChatId}");
+                Log.Debug("Отправка фото пользователю {task.ChatId}", task.ChatId);
 
-            await _bot.SendPhoto(task.ChatId, stream, caption: "📸 Вот твоё фото!");
-            task.Status = TaskStatus.Completed;
-            task.FinishedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+                await _bot.SendPhoto(task.ChatId, stream, caption: "📸 Вот твоё фото!");
+                task.Status = TaskStatus.Completed;
+                task.FinishedAt = DateTimeOffset.Now;
+                await _db.SaveChangesAsync();
+
+                Log.Debug("Фото обработано!");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка при обработке фото");
+            }
         }
 
         private async Task HandleScheduledPhotoTask(TaskItem task)
         {
-            await using var stream = File.OpenRead(@"GoProPhotos\345.jpg");
-            var subscribedUsers = await _db.Users
-                .Where(u => u.SunsetSubscribtion == true)
-                .ToListAsync();
-
-            foreach (var user in subscribedUsers)
+            Log.Debug("Обработка запланированного фото...");
+            try
             {
-                await _bot.SendPhoto(user.TGUserId, stream, caption: "📸 Запланированное фото!");
-                Console.WriteLine($"Отправлено фото пользователю {user.Username}");
+                await using var stream = File.OpenRead(@"GoProPhotos\1.jpg");
+                var subscribedUsers = await _db.Users
+                    .Where(u => u.SunsetSubscribtion == true)
+                    .ToListAsync();
+
+                foreach (var user in subscribedUsers)
+                {
+                    await _bot.SendPhoto(user.TGUserId, stream, caption: "📸 Запланированное фото!");
+                    Log.Debug("Отправлено фото пользователю {user.Username}", user.Username);
+                }
+                task.Status = TaskStatus.Completed;
+                task.FinishedAt = DateTimeOffset.Now;
+                await _db.SaveChangesAsync();
+                Log.Debug("Запланированное фото обработано!");
             }
-            task.Status = TaskStatus.Completed;
-            task.FinishedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка при обработке запланированного фото");
+            }
+            
         }
 
         private async Task HandleTimelapse(TaskItem task)
         {
-            string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..\\..\\.."));
-            string outputFile = Path.Combine(projectRoot, DateTime.Now.ToString("ssmmhh.ddMMyyyy") + ".mp4");
-
-            await FFMpegWorker.CreateVideoFromPhotos(_settings.Base.DownloadFolder, outputFile);
-
-            var subscribedUsers = await _db.Users
-                .Where(u => u.SunsetSubscribtion == true)
-                .ToListAsync();
-
-            foreach (var user in subscribedUsers)
+            Log.Debug("Обработка таймлапса...");
+            try
             {
-                Console.WriteLine(user.TGUserId);
-                await _bot.SendPhoto(user.TGUserId, outputFile, caption: "Крутой таймлапс!");
-                Console.WriteLine($"Отправлен таймлапс пользователю {user.Username}");
+                // string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..\\..\\.."));
+                // string outputFile = Path.Combine(projectRoot, DateTime.Now.ToString("ssmmhh.ddMMyyyy") + ".mp4");
+
+                // await FFMpegWorker.CreateVideoFromPhotos(_settings.Base.DownloadFolder, outputFile);
+                await _camera.StartTimeLapse();
+                var timelapseDelay = (int)TimeSpan.Parse(task.Parameters).TotalMilliseconds; //потом сделать нормально
+                Log.Debug("Время съёмки в милисекундах: {TimelapseDelay}", timelapseDelay); 
+                await Task.Delay(timelapseDelay);
+                await _camera.StopTimeLapse(); //надо будет передавать длительность в параметрах задачи
+
+                string outputFile = @"GoProPhotos\1.jpg";
+
+                var subscribedUsers = await _db.Users
+                    .Where(u => u.SunsetSubscribtion == true)
+                    .ToListAsync();
+                Log.Debug("Пользователи с подпиской найдены");
+
+                foreach (var user in subscribedUsers)
+                {
+                    Console.WriteLine(user.TGUserId);
+                    await _bot.SendPhoto(user.TGUserId, outputFile, caption: "Крутой таймлапс!");
+                    Log.Debug("Отправлен таймлапс пользователю {user.Username}", user.Username);
+                }
+                task.Status = TaskStatus.Completed;
+                task.FinishedAt = DateTimeOffset.Now;
+                await _db.SaveChangesAsync();
+                Log.Debug("Таймлапс обработан :)");
             }
-            task.Status = TaskStatus.Completed;
-            task.FinishedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка при обработке таймлапса :(");
+            }
         }
     }
 }

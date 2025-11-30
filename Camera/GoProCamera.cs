@@ -57,5 +57,12 @@ namespace GoProTimelapse
             await _httpClient.GetAsync(url);
             await Task.Delay(5000); //5 секунд на фото и сохранение
         }
+        public int GetPhotoCount(DateTime startTime, DateTime stopTime)
+        {
+            TimeSpan shootingTime = stopTime - startTime;
+            Console.WriteLine($"Время съёмки: {shootingTime}");
+            int seconds = (int)shootingTime.TotalSeconds;
+            return seconds / _settings.Timelaps.PhotoDelaySeconds;//количество фото, которые нужно сделать
+        }
     }
 }

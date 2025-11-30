@@ -4,6 +4,8 @@ using Newtonsoft.Json.Linq;
 using System.Data;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
+using Serilog;
+using Serilog.Events;
 
 namespace GoProTimelapse
 {
@@ -13,72 +15,80 @@ namespace GoProTimelapse
         //потом вынести в appsettings
         private readonly double latitude;
         private readonly double longitude;
-        private object template;
+        private static readonly ILogger Log = Serilog.Log.ForContext<SunsetPlanner>();
 
         public SunsetPlanner()
         {
             _db = new AppDbContext();
             latitude = 56.8386;   //широта
             longitude = 60.6055;  //долгота
-            template = new
-            {
-                results = new
-                {
-                    sunset = "",
-                    civil_twilight_end = ""
-                }
-            };
         }
         public async Task StartAsync(CancellationToken token)
         {
+            Log.Information("Запуск планировщика закатов...");
             while (!token.IsCancellationRequested)
             {
-                Console.WriteLine("ogo");
                 await GetSunsetTime();
                 await Task.Delay(TimeSpan.FromDays(1));
-                Console.WriteLine("Планировщик таймлапсов запущен");
             }
         }
         public async Task GetSunsetTime()
         {
-            string apiUrl = $"https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&formatted=0";
-
-            using (HttpClient client = new HttpClient())
+            Log.Debug("Получение времени заката...");
+            try
             {
-                HttpResponseMessage response = await client.GetAsync(apiUrl);
-                if (response.IsSuccessStatusCode)
+                string apiUrl = $"https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&formatted=0&tzid=Asia/Yekaterinburg";
+
+                using (HttpClient client = new HttpClient())
                 {
-                    string jsonResponse = await response.Content.ReadAsStringAsync();
-                    var data = JsonConvert.DeserializeAnonymousType(jsonResponse, template);
-                    dynamic data2 = JsonConvert.DeserializeObject(jsonResponse);
+                    HttpResponseMessage response = await client.GetAsync(apiUrl);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        string jsonResponse = await response.Content.ReadAsStringAsync();
+                        var template = new { results = new { sunset = "", civil_twilight_end = "" }, status = "" };
+                        var data = JsonConvert.DeserializeAnonymousType(jsonResponse, template);
 
-                    DateTime sunset = DateTime.Parse((string)data.sunset);
-                    DateTime civilTwilightEnd = DateTime.Parse((string)data.results.civil_twilight_end);
-                    Console.WriteLine(template);
-                    Console.WriteLine(data);
-                    Console.WriteLine(data2);
+                        DateTimeOffset sunset = DateTimeOffset.Parse(data.results.sunset);
+                        DateTimeOffset civilTwilightEnd = DateTimeOffset.Parse(data.results.civil_twilight_end);
 
-                    // Console.WriteLine($"Начало заката (заход солнца): {sunset}"); //а теперь вроде правильное :O
-                    // Console.WriteLine($"Конец заката (окончание гражданских сумерек): {civilTwilightEnd}");
+                        Log.Debug("Начало заката: {Sunset}", sunset);
+                        Log.Debug("Конец заката: {CivilTwilightEnd}", civilTwilightEnd);
+
+                        await ScheduleTimelapse(sunset, civilTwilightEnd);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка в планировщике закатов");
             }
 
         }
 
-        public async Task ScheduleTimelapse(DateTime sunsetTime)
+        public async Task ScheduleTimelapse(DateTimeOffset sunsetTime, DateTimeOffset sunsetTime2)
         {
-            var task = new TaskItem
+            try
             {
-                Type = TaskType.Timelapse,
-                Status = TaskStatus.Created,
-                CreatedAt = DateTime.UtcNow,
-                ScheduledAt = sunsetTime.AddHours(1).AddMinutes(10)
-            };
-            _db.Tasks.Add(task);
-            await _db.SaveChangesAsync();
+                Log.Debug("Создание задачи...");
+                var task = new TaskItem
+                {
+                    Type = TaskType.Timelapse,
+                    Status = TaskStatus.Created,
+                    CreatedAt = DateTimeOffset.Now,
+                    ScheduledAt = sunsetTime,
+                    Parameters = (sunsetTime2 - sunsetTime).ToString()
+                };
+               
+                _db.Tasks.Add(task);
+                await _db.SaveChangesAsync();
+                await Worker.NotifyNewTask();
 
-            await Worker.NotifyNewTask();
-            Console.WriteLine("Задача создана");
+                Log.Debug("Задача создана!");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка в планировщике закатов");
+            }
         }
     }
 }

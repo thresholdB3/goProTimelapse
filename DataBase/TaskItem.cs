@@ -25,10 +25,10 @@ namespace GoProTimelapse
         public TaskStatus Status { get; set; }       // Статус
         public string? Parameters { get; set; }       // JSON-параметры (fps, duration и т.д.)
         public int? UserId { get; set; }             // Кто создал
-        public DateTime CreatedAt { get; set; }      // Когда создана
-        public DateTime? StartedAt { get; set; }     // Когда начата
-        public DateTime? FinishedAt { get; set; }    // Когда завершена
-        public DateTime? ScheduledAt { get; set; }   // Плановое время начала
+        public DateTimeOffset CreatedAt { get; set; }      // Когда создана
+        public DateTimeOffset? StartedAt { get; set; }     // Когда начата
+        public DateTimeOffset? FinishedAt { get; set; }    // Когда завершена
+        public DateTimeOffset? ScheduledAt { get; set; }   // Плановое время начала
 
         public long? ChatId { get; set; }
         // Удобные методы для сериализации параметров

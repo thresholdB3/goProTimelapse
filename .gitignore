@@ -2,6 +2,7 @@ bin/
 obj/
 GoProPhotos/
 Migrations/
+Logs/
 ffmpeg.exe
 ffprobe.exe
 appsettings.json
