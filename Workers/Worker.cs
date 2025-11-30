@@ -54,7 +54,7 @@ namespace GoProTimelapse
                     {
                         _ = Task.Run(async () =>
                         {
-                            await Task.Delay(task.ScheduledAt.Value - DateTime.UtcNow);
+                            await Task.Delay(task.ScheduledAt.Value - DateTimeOffset.Now);
                             await HandleScheduledPhotoTask(task);
                         });
                     }
@@ -64,7 +64,7 @@ namespace GoProTimelapse
                     }
                 }else if (task.Type == TaskType.Timelapse)
                 {
-                    await Task.Delay(task.ScheduledAt.Value - DateTime.UtcNow);
+                    await Task.Delay(task.ScheduledAt.Value - DateTimeOffset.Now);
                     await HandleTimelapse(task);
                 }
             }
@@ -74,10 +74,10 @@ namespace GoProTimelapse
         {
             await using var stream = File.OpenRead(@"GoProPhotos\345.jpg");
 
-            var user = await _db.Users.FindAsync(task.UserId);
+            // await _camera.SetPhotoModeAsync();
+            // await _camera.TakePhotoAsync();
 
-            await _camera.SetPhotoModeAsync();
-            await _camera.TakePhotoAsync();
+            await _camera.TakePhoto();
 
             Console.WriteLine($"Отправка фото пользователю {task.ChatId}");
 
@@ -91,7 +91,7 @@ namespace GoProTimelapse
         {
             await using var stream = File.OpenRead(@"GoProPhotos\345.jpg");
             var subscribedUsers = await _db.Users
-                .Where(u => u.SunsetSubscribtion == true) //ПОМЕНЯТЬ НА TRUEEE!!!! 
+                .Where(u => u.SunsetSubscribtion == true)
                 .ToListAsync();
 
             foreach (var user in subscribedUsers)

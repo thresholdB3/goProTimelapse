@@ -13,12 +13,21 @@ namespace GoProTimelapse
         //потом вынести в appsettings
         private readonly double latitude;
         private readonly double longitude;
+        private object template;
 
         public SunsetPlanner()
         {
             _db = new AppDbContext();
             latitude = 56.8386;   //широта
             longitude = 60.6055;  //долгота
+            template = new
+            {
+                results = new
+                {
+                    sunset = "",
+                    civil_twilight_end = ""
+                }
+            };
         }
         public async Task StartAsync(CancellationToken token)
         {
@@ -32,16 +41,6 @@ namespace GoProTimelapse
         }
         public async Task GetSunsetTime()
         {
-            // using var client = new HttpClient();
-
-            // var response = await client.GetStringAsync($"https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&formatted=0");
-            // var jsonData = JObject.Parse(response);
-
-            // DateTime sunsetTime = DateTime.Parse(jsonData["results"]["sunset"].ToString());
-            // Console.WriteLine(sunsetTime);
-
-            //await ScheduleTimelapse(sunsetTime);
-
             string apiUrl = $"https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&formatted=0";
 
             using (HttpClient client = new HttpClient())
@@ -50,13 +49,17 @@ namespace GoProTimelapse
                 if (response.IsSuccessStatusCode)
                 {
                     string jsonResponse = await response.Content.ReadAsStringAsync();
-                    dynamic data = JsonConvert.DeserializeObject(jsonResponse);
+                    var data = JsonConvert.DeserializeAnonymousType(jsonResponse, template);
+                    dynamic data2 = JsonConvert.DeserializeObject(jsonResponse);
 
-                    DateTime sunset = DateTime.Parse((string)data.results.sunset);
+                    DateTime sunset = DateTime.Parse((string)data.sunset);
                     DateTime civilTwilightEnd = DateTime.Parse((string)data.results.civil_twilight_end);
+                    Console.WriteLine(template);
+                    Console.WriteLine(data);
+                    Console.WriteLine(data2);
 
-                    Console.WriteLine($"Начало заката (заход солнца): {sunset.AddHours(-5)}"); //оно не хочет давать правильное время, пока так, потом исправлю
-                    Console.WriteLine($"Конец заката (окончание гражданских сумерек): {civilTwilightEnd.AddHours(-5)}");
+                    // Console.WriteLine($"Начало заката (заход солнца): {sunset}"); //а теперь вроде правильное :O
+                    // Console.WriteLine($"Конец заката (окончание гражданских сумерек): {civilTwilightEnd}");
                 }
             }
 
