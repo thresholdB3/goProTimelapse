@@ -149,10 +149,13 @@ namespace GoProTimelapse
 
                 // await FFMpegWorker.CreateVideoFromPhotos(_settings.Base.DownloadFolder, outputFile);
                 await _camera.StartTimeLapse();
+                // _camera.isBusy = true;
+
                 var timelapseDelay = (int)TimeSpan.Parse(task.Parameters).TotalMilliseconds; //потом сделать нормально
                 Log.Debug("Время съёмки в милисекундах: {TimelapseDelay}", timelapseDelay); 
                 await Task.Delay(timelapseDelay);
                 await _camera.StopTimeLapse(); //надо будет передавать длительность в параметрах задачи
+                // _camera.isBusy = false;
 
                 string outputFile = @"GoProPhotos\1.jpg";
 

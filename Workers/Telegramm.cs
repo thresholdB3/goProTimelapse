@@ -40,6 +40,16 @@ namespace GoProTimelapse
         {
             try
             {
+                //#########################################################################################
+
+                // if (update is { CallbackQuery: { } query }) // non-null CallbackQuery
+                // {
+                //     await bot.AnswerCallbackQuery(query.Id, $"You picked {query.Data}");
+                //     await bot.SendMessage(query.Message!.Chat, $"User {query.From} clicked on {query.Data}");
+                // }
+
+                //###########################################################################################
+
                 if (update.Type != UpdateType.Message || update.Message == null)
                     return;
                 
@@ -59,7 +69,7 @@ namespace GoProTimelapse
                         break;
 
                     case "/scheduledphoto":
-                        await CreateScheduledPhotoCommand(DateTime.UtcNow.AddMinutes(1), message, chatId);
+                        await CreateScheduledPhotoCommand(DateTimeOffset.Now.AddMinutes(1), message, chatId);
                         break;
 
                     case "/subscribe":
@@ -97,7 +107,7 @@ namespace GoProTimelapse
                         Username = username,
                         FirstName = message.Chat.FirstName ?? "",
                         LastName = message.Chat.LastName ?? "",
-                        RegisteredAt = DateTime.UtcNow,
+                        RegisteredAt = DateTimeOffset.Now,
                         TGUserId = chatId
                     };
 
@@ -134,21 +144,29 @@ namespace GoProTimelapse
                     return;
                 }
 
-                var task = new TaskItem
-                {
-                    Type = TaskType.Photo,
-                    Status = TaskStatus.Created,
-                    ChatId = chatId,
-                    UserId = user.Id,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _db.Tasks.Add(task);
-                await _db.SaveChangesAsync();
+                // if (GoProCameraFake.isBusy)
+                // {
+                //     await _bot.SendMessage(chatId, "Камера занята, попробуй позже:)");
+                //     return;
+                // }
+
+                // var task = new TaskItem
+                // {
+                //     Type = TaskType.Photo,
+                //     Status = TaskStatus.Created,
+                //     ChatId = chatId,
+                //     UserId = user.Id,
+                //     CreatedAt = DateTime.UtcNow
+                // };
+                // _db.Tasks.Add(task);
+                // await _db.SaveChangesAsync();
+                await CreateTask(TaskType.Photo, null, chatId, user.Id, null);
+                Log.Debug("Создание задачи пользователем {User.Id}...", user.Id);
 
                 await _bot.SendMessage(chatId, "📸 Задача на фото создана. Сейчас обработаю!");
-                Log.Debug("Добавлена задача фото пользователем {Username}", username);
+                // Log.Debug("Добавлена задача фото пользователем {Username}", username);
 
-                await Worker.NotifyNewTask();
+                // await Worker.NotifyNewTask();
             }
             catch (Exception ex)
             {
@@ -156,7 +174,7 @@ namespace GoProTimelapse
             }
         }
 
-        public async Task CreateScheduledPhotoCommand(DateTime scheduledTime, Message message, int chatId)
+        public async Task CreateScheduledPhotoCommand(DateTimeOffset scheduledTime, Message message, int chatId)
         {
             try
             {
@@ -168,11 +186,14 @@ namespace GoProTimelapse
                     await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
                     return;
                 }
+
+
+
                 var task = new TaskItem
                 {
                     Type = TaskType.Photo,
                     Status = TaskStatus.Created,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = DateTimeOffset.Now,
                     ScheduledAt = scheduledTime
                 };
                 _db.Tasks.Add(task);
@@ -265,6 +286,26 @@ namespace GoProTimelapse
         {
             Log.Error(exception.Message, "Ошибка в боте :(");
             return Task.CompletedTask;
+        }
+
+        private async Task CreateTask(TaskType type, string? parameters, long? chatId, int? userId, DateTimeOffset? scheduledTime)
+        {
+            var task = new TaskItem
+            {
+                Type = type,
+                Status = TaskStatus.Created,
+                Parameters = parameters,
+                ChatId = chatId,
+                UserId = userId,
+                CreatedAt = DateTimeOffset.Now,
+                ScheduledAt = scheduledTime
+            };
+            _db.Tasks.Add(task);
+            await _db.SaveChangesAsync();
+
+            Log.Debug("Добавлена задача типа {Type} пользователем {UserId}", type, userId);
+
+            await Worker.NotifyNewTask();
         }
     }
 
