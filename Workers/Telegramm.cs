@@ -6,6 +6,9 @@ using System.IO;
 using Serilog;
 using Serilog.Events;
 using System.Diagnostics;
+using Telegram.CalendarKit;
+using Telegram.Bot.Extensions;
+
 
 namespace GoProTimelapse
 {
@@ -14,11 +17,30 @@ namespace GoProTimelapse
         private readonly TelegramBotClient _bot;
         private readonly AppDbContext _db;
         private static readonly ILogger Log = Serilog.Log.ForContext<Telegramm>();
+        
 
-        public Telegramm(string botToken)
+        private Telegramm(string botToken)
         {
             _bot = new TelegramBotClient(botToken);
             _db = new AppDbContext();
+        }
+        private static Telegramm _singlet;
+        public static Telegramm CreateSingleton(string token)
+        {
+            if (_singlet == null)
+            {
+                _singlet = new Telegramm(token);
+                Log.Debug("_singlet создан!!");
+            }
+            return _singlet;
+        }
+        public async Task SendPhoto(long? chatId, Stream stream, string text)
+        {
+            Log.Debug("Отправка фото пользователю {ChatId}...", chatId);
+
+            await _singlet._bot.SendPhoto(chatId, stream, caption: text);
+
+            Log.Debug("Фото отправлено!");
         }
 
         //Запуск слушателя
@@ -26,6 +48,7 @@ namespace GoProTimelapse
         {
             Log.Information("Запуск бота...");
             var me = await _bot.GetMe();
+            
 
             _bot.StartReceiving(
                 HandleUpdateAsync,
@@ -44,8 +67,14 @@ namespace GoProTimelapse
 
                 // if (update is { CallbackQuery: { } query }) // non-null CallbackQuery
                 // {
-                //     await bot.AnswerCallbackQuery(query.Id, $"You picked {query.Data}");
-                //     await bot.SendMessage(query.Message!.Chat, $"User {query.From} clicked on {query.Data}");
+                //     Log.Debug("Бот получил апдейт {Update.CallbackQuery}", update.ChosenInlineResult);
+
+                //     // await bot.AnswerCallbackQuery(query.Id, $"You picked {query.Data}");
+                //     // await bot.SendMessage(query.Message!.Chat, $"User {query.From} clicked on {query.Data}");
+                //     // var callbackData = "calendar:prev:2024-12";
+                //     // var parsedData = CalendarBuilder.ParseCalendarCallback(callbackData);
+                //     // Log.Debug("Текущая дата: {ParsedData}", parsedData);
+                    
                 // }
 
                 //###########################################################################################
@@ -144,29 +173,11 @@ namespace GoProTimelapse
                     return;
                 }
 
-                // if (GoProCameraFake.isBusy)
-                // {
-                //     await _bot.SendMessage(chatId, "Камера занята, попробуй позже:)");
-                //     return;
-                // }
-
-                // var task = new TaskItem
-                // {
-                //     Type = TaskType.Photo,
-                //     Status = TaskStatus.Created,
-                //     ChatId = chatId,
-                //     UserId = user.Id,
-                //     CreatedAt = DateTime.UtcNow
-                // };
-                // _db.Tasks.Add(task);
-                // await _db.SaveChangesAsync();
                 await CreateTask(TaskType.Photo, null, chatId, user.Id, null);
                 Log.Debug("Создание задачи пользователем {User.Id}...", user.Id);
 
                 await _bot.SendMessage(chatId, "📸 Задача на фото создана. Сейчас обработаю!");
-                // Log.Debug("Добавлена задача фото пользователем {Username}", username);
 
-                // await Worker.NotifyNewTask();
             }
             catch (Exception ex)
             {
@@ -187,21 +198,17 @@ namespace GoProTimelapse
                     return;
                 }
 
+                // await calendarBuilder.SendCalendarMessageAsync(_bot, chatId, "Вот ваш календарь:", 2024, 12, CalendarViewType.Default);
+                // var msg = await _bot.SendHtml(chatId, """
+                //     <img src="https://telegrambots.github.io/book/docs/photo-ara.jpg">
+                //     Do you like this photo?
+                //     <keyboard>
+                //     <button text="Yes" callback="ara-yes">
+                //     <button text="No" callback="ara-no">
+                //     </keyboard>
+                //     """);
 
-
-                var task = new TaskItem
-                {
-                    Type = TaskType.Photo,
-                    Status = TaskStatus.Created,
-                    CreatedAt = DateTimeOffset.Now,
-                    ScheduledAt = scheduledTime
-                };
-                _db.Tasks.Add(task);
-                await _db.SaveChangesAsync();
-
-                Log.Debug("Добавлена задача запланированное фото пользователем {Username}", username);
-
-                await Worker.NotifyNewTask();
+                await CreateTask(TaskType.Photo, null, null, null, scheduledTime);
             }
             catch (Exception ex)
             {

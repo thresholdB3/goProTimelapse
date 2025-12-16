@@ -28,7 +28,8 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <!-- <PackageReference Include="SunCalcNet" Version="1.2.3" /> -->
-    <PackageReference Include="Telegram.Bot" Version="22.6.2" />
+    <PackageReference Include="Telegram.Bot" Version="22.7.6" />
+    <PackageReference Include="Telegram.BotBuilder.CalendarPicker" Version="1.0.0" />
     <PackageReference Include="Telegram.CalendarKit" Version="1.0.2" />
   </ItemGroup>
 

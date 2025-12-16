@@ -14,6 +14,7 @@ namespace GoProTimelapse
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
         private readonly Settings _settings;
         private static readonly ILogger Log = Serilog.Log.ForContext<Worker>();
+        // telegramBot = Telegramm.CreateSingleton(settings.Telegramm.botToken);
 
         public Worker(string botToken, Settings settings)
         {
@@ -99,7 +100,14 @@ namespace GoProTimelapse
 
                 Log.Debug("Отправка фото пользователю {task.ChatId}", task.ChatId);
 
-                await _bot.SendPhoto(task.ChatId, stream, caption: "📸 Вот твоё фото!");
+                // await _bot.SendPhoto(task.ChatId, stream, caption: "📸 Вот твоё фото!");
+                // telegramBot.SendPhoto(task.ChatId, stream, "📸 Вот твоё фото!");
+                // Telegramm.SendPhoto(task.ChatId, stream, "📸 Вот твоё фото!");
+                await Telegramm
+                    .CreateSingleton("") // токен тут НЕ используется, экземпляр уже есть
+                    .SendPhoto(task.ChatId, stream, "📸 Вот твоё фото!");
+                
+                
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;
                 await _db.SaveChangesAsync();
@@ -124,7 +132,10 @@ namespace GoProTimelapse
 
                 foreach (var user in subscribedUsers)
                 {
-                    await _bot.SendPhoto(user.TGUserId, stream, caption: "📸 Запланированное фото!");
+                    // await _bot.SendPhoto(user.TGUserId, stream, caption: "📸 Запланированное фото!");
+                    await Telegramm
+                        .CreateSingleton("")
+                        .SendPhoto(user.TGUserId, stream, "📸 Запланированное фото!");
                     Log.Debug("Отправлено фото пользователю {user.Username}", user.Username);
                 }
                 task.Status = TaskStatus.Completed;
@@ -158,6 +169,7 @@ namespace GoProTimelapse
                 // _camera.isBusy = false;
 
                 string outputFile = @"GoProPhotos\1.jpg";
+                await using var stream = File.OpenRead(outputFile);
 
                 var subscribedUsers = await _db.Users
                     .Where(u => u.SunsetSubscribtion == true)
@@ -167,7 +179,10 @@ namespace GoProTimelapse
                 foreach (var user in subscribedUsers)
                 {
                     Console.WriteLine(user.TGUserId);
-                    await _bot.SendPhoto(user.TGUserId, outputFile, caption: "Крутой таймлапс!");
+                    // await _bot.SendPhoto(user.TGUserId, outputFile, caption: "Крутой таймлапс!");
+                    await Telegramm
+                        .CreateSingleton("")
+                        .SendPhoto(user.TGUserId, stream, "Крутой таймлапс!");
                     Log.Debug("Отправлен таймлапс пользователю {user.Username}", user.Username);
                 }
                 task.Status = TaskStatus.Completed;
