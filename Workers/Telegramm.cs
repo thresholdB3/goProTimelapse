@@ -34,7 +34,7 @@ namespace GoProTimelapse
             }
             return _singlet;
         }
-        public async Task SendPhoto(long? chatId, Stream stream, string text)
+        public static async Task SendPhoto(long? chatId, Stream stream, string text)
         {
             Log.Debug("Отправка фото пользователю {ChatId}...", chatId);
 

@@ -14,53 +14,48 @@ namespace GoProTimelapse
     {
         private readonly Settings _settings;
         private readonly HttpClient _httpClient;
-        public bool isBusy => false;
+        public bool isBusy { get; set; }
         private static readonly ILogger Log = Serilog.Log.ForContext<GoProCameraFake>();
+        
 
-        public GoProCameraFake(Settings settings)
+        public GoProCameraFake()
         {
-            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+
             _httpClient = new HttpClient();
         }
 
-        public async Task DownloadLastPhotoAsync(string fileName)
+
+        public async Task SetMode(int mode)
         {
-            string downloadFolder = _settings.Base.DownloadFolder;
-
-
-            //уже есть пачка фото с прошлого таймлапса, пока не надо
-
-            await Task.Delay(1000);//6 секунд на загрузку
+            Log.Debug("переключение режима на {mode}...", mode);
+            //не помню какой режим за что, но 1 - это фото, остальные потом гляну
+            await Task.Delay(1000); 
         }
-        // public async Task SetPhotoMode()
-        // {
-        //     Console.WriteLine("переключение режима...");
-        //     await Task.Delay(1000); //3 секунды на переключение режима
-        // }
         public async Task TakePhoto()
         {
-            Console.WriteLine("фото");
-            await Task.Delay(1000); //5 секунд на фото и сохранение
-            // переключение режима будет здесь же
+            SetMode(1);
+            await Task.Delay(1000);
         }
 
         public async Task StartTimeLapse()
         {
+            isBusy = true;
             Log.Information("Камера начинает снимать таймлапс...");
         }
         public async Task StopTimeLapse()
         {
+            isBusy = false;
             Log.Information("Камера закончила таймлапс:)");
         }
-        public async Task<byte[]> DownloadLastPhoto()
+        public async Task<byte[]> DownloadLastMedia()
         {
-            byte[] placeholder = await File.ReadAllBytesAsync("тут путь указать к фото");
+            byte[] placeholder = await File.ReadAllBytesAsync(@"GoProPhotos\1.jpg");
             return placeholder;
         }
-        public async Task<byte[]> GetLastVideo()
-        {
-            byte[] placeholder = await File.ReadAllBytesAsync("тут путь указать к видео");
-            return placeholder;
-        }
+        // public async Task<byte[]> GetLastVideo()
+        // {
+        //     byte[] placeholder = await File.ReadAllBytesAsync("тут путь указать к видео");
+        //     return placeholder;
+        // }
     }
 }

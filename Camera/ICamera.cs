@@ -17,12 +17,14 @@ namespace GoProTimelapse
 
     internal interface ICamera
     {
-        public bool isBusy { get; }
+        public bool isBusy { get; set; }
+        public Task SetMode(int mode); //пусть камера сама меняет режим в других методах + сделать параметр удобнее
         public Task TakePhoto(); 
         public Task StartTimeLapse();
         public Task StopTimeLapse();
-        public Task<byte[]> DownloadLastPhoto(); //+удаление с камеры
-        public Task<byte[]> GetLastVideo(); //+удаление с камеры
+        public Task<byte[]> DownloadLastMedia(); //+удаление с камеры
+
+        // public Task<byte[]> GetLastVideo(); //+удаление с камеры //не одно и то же с тем что выше??
 
 
     }
