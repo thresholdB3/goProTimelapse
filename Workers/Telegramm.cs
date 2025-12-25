@@ -208,7 +208,7 @@ namespace GoProTimelapse
                 //     </keyboard>
                 //     """);
 
-                await CreateTask(TaskType.Photo, null, null, null, scheduledTime);
+                await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
             }
             catch (Exception ex)
             {

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+
 using Telegram.Bot;
 using Serilog;
 using Serilog.Events;
@@ -26,8 +27,8 @@ namespace GoProTimelapse
         public override async Task Execute(string? Parameters = null)
         {
             await new TakePhoto().Execute();
-            await new DownloadLastMedia().Execute();
-            await new SendMedia().Execute();
+            // await new DownloadLastMedia().Execute();
+            await new SendMedia().Execute(Parameters);
         }
     }
     public class ProcessTimelapse : TaskProcessor
@@ -51,13 +52,16 @@ namespace GoProTimelapse
 
             await _camera.StopTimeLapse();
 
-            //тут что то про сохранение файла
-            // await new DownloadLastMedia().Execute();
-            // var stream = await _camera.DownloadLastMedia();
-
             foreach (var userId in data.Users)
             {
-                await new SendMedia().Execute(userId.ToString());
+                var parametersJson = new 
+                {
+                    user = userId,
+                    message = "соо ещё не придумала(("
+                };
+                string parameters1 = JsonConvert.SerializeObject(parametersJson);
+                // var parameters1 = System.Text.Json.JsonSerializer.Serialize(parametersJson);
+                await new SendMedia().Execute(parameters1);
             }
         }
     }
@@ -68,21 +72,36 @@ namespace GoProTimelapse
             Log.Debug("Фото сделано");
         }
     }
-    public class DownloadLastMedia : TaskProcessor
+    public class DownloadLastMedia  //пусть прост не наследует
+                                    //потом может что покруче придумаю
     {
-        public override async Task Execute(string? Parameters = null) 
+        public readonly GoProCameraFake _camera;
+        public DownloadLastMedia()
+        {
+            _camera = new GoProCameraFake();
+        }
+        public async Task<Stream> Execute()
         {
             var stream = await _camera.DownloadLastMedia();
             Log.Debug("Медиа скачано");
+            return stream;
         }
     }
     public class SendMedia : TaskProcessor
     {
         public override async Task Execute(string? Parameters = null)
         {
-            await using var stream = File.OpenRead(@"GoProPhotos\1.jpg"); //потом переделаю, пока не знаю как, думать надо:(
-            Log.Debug("Отправка фото пользователю {parameters}", Parameters);
-            await Telegramm.SendPhoto(long.Parse(Parameters), stream, "📸 Вот твоё медиа!");
+            var template = new
+            {
+                user = 0L,
+                message = ""
+            };
+            var data = JsonConvert.DeserializeAnonymousType(Parameters, template);
+            var userId = Convert.ToInt64(data.user);
+            var message = Convert.ToString(data.message);
+            var stream = await new DownloadLastMedia().Execute();
+            Log.Debug("Отправка фото пользователю {userId}", userId);
+            await Telegramm.SendPhoto(userId, stream, message);
             Log.Debug("Медиа отправлено");
         }
     }

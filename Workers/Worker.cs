@@ -9,16 +9,14 @@ namespace GoProTimelapse
     public class Worker
     {
         private readonly AppDbContext _db;
-        private readonly GoProCameraFake _camera; //тут камеры быть не должно
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
-        private readonly Settings _settings;
+        // private readonly Settings _settings;//settings тут вроде вообще не используется, лол
         private static readonly ILogger Log = Serilog.Log.ForContext<Worker>();
 
-        public Worker(string botToken, Settings settings)
+        public Worker(Settings settings)
         {
             _db = new AppDbContext();
-            _camera = new GoProCameraFake();
-            _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            // _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
         public static async Task NotifyNewTask()
@@ -88,15 +86,7 @@ namespace GoProTimelapse
             Log.Debug("Обработка фото...");
             try
             {
-                await new ProcessPhoto().Execute();
-
-                await using var stream = File.OpenRead(@"GoProPhotos\1.jpg");
-
-                Log.Debug("Отправка фото пользователю {task.ChatId}", task.ChatId);
-
-                await Telegramm.SendPhoto(task.ChatId, stream, "📸 Вот твоё фото!");
-
-                
+                await new ProcessPhoto().Execute(task.ChatId.ToString());
                 
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;
@@ -115,17 +105,8 @@ namespace GoProTimelapse
             Log.Debug("Обработка запланированного фото...");
             try
             {
-                await using var stream = File.OpenRead(@"GoProPhotos\1.jpg");
-                var subscribedUsers = await _db.Users
-                    .Where(u => u.SunsetSubscribtion == true)
-                    .ToListAsync();
+                await new ProcessPhoto().Execute(task.ChatId.ToString());
 
-                foreach (var user in subscribedUsers)
-                {
-                    await Telegramm.SendPhoto(user.TGUserId, stream, "📸 Запланированное фото!");
-
-                    Log.Debug("Отправлено фото пользователю {user.Username}", user.Username);
-                }
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;
                 await _db.SaveChangesAsync();
@@ -143,12 +124,6 @@ namespace GoProTimelapse
             Log.Debug("Обработка таймлапса...");
             try
             {
-                // string projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..\\..\\.."));
-                // string outputFile = Path.Combine(projectRoot, DateTime.Now.ToString("ssmmhh.ddMMyyyy") + ".mp4");
-
-                // string outputFile = @"GoProPhotos\1.jpg";
-                // await using var stream = File.OpenRead(outputFile);
-
                 var subscribedUsers = await _db.Users
                     .Where(u => u.SunsetSubscribtion == true)
                     .ToListAsync();
@@ -158,7 +133,6 @@ namespace GoProTimelapse
 
                 foreach (var user in subscribedUsers)
                 {
-                    // await Telegramm.SendPhoto(user.TGUserId, stream, "Крутой таймлапс!");
                     userId.Add(user.TGUserId);
                     Log.Debug("Добавлен пользователь {user.Username}", user.Username);
                 }
@@ -169,6 +143,7 @@ namespace GoProTimelapse
                     TimelapseDelay = task.Parameters
                 };
                 var parameters = JsonSerializer.Serialize(parametersJson);//потом путь принимает сразу json наверное
+                                                                            //НЕТТТ остальным методам json не нужен, так проще
 
                 await new ProcessTimelapse().Execute(parameters);
 

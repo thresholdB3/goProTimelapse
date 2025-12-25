@@ -22,7 +22,7 @@ namespace GoProTimelapse
         public Task TakePhoto(); 
         public Task StartTimeLapse();
         public Task StopTimeLapse();
-        public Task<byte[]> DownloadLastMedia(); //+удаление с камеры
+        public Task<Stream> DownloadLastMedia(); //+удаление с камеры
 
         // public Task<byte[]> GetLastVideo(); //+удаление с камеры //не одно и то же с тем что выше??
 

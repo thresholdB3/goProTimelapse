@@ -43,7 +43,7 @@ namespace GoProTimelapse
 
                 var settings = Settings.ReadSettings();
                 var telegramBot = Telegramm.CreateSingleton(settings.Telegramm.botToken);
-                var worker = new Worker(settings.Telegramm.botToken, settings);
+                var worker = new Worker(settings);
                 var sunsetPlanner = new SunsetPlanner();
 
                 var cts = new CancellationTokenSource();

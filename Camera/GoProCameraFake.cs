@@ -47,9 +47,9 @@ namespace GoProTimelapse
             isBusy = false;
             Log.Information("Камера закончила таймлапс:)");
         }
-        public async Task<byte[]> DownloadLastMedia()
+        public async Task<Stream> DownloadLastMedia()
         {
-            byte[] placeholder = await File.ReadAllBytesAsync(@"GoProPhotos\1.jpg");
+            Stream placeholder = File.OpenRead(@"GoProPhotos\1.jpg");
             return placeholder;
         }
         // public async Task<byte[]> GetLastVideo()
