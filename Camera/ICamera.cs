@@ -18,7 +18,7 @@ namespace GoProTimelapse
     internal interface ICamera
     {
         public bool isBusy { get; set; }
-        public Task SetMode(int mode); //пусть камера сама меняет режим в других методах + сделать параметр удобнее
+        public Task SetMode(GoProCameraFake.CameraStatus mode); //помоему как то не очень, потом переделаю
         public Task TakePhoto(); 
         public Task StartTimeLapse();
         public Task StopTimeLapse();

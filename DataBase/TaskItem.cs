@@ -32,13 +32,13 @@ namespace GoProTimelapse
 
         public long? ChatId { get; set; }
         // Удобные методы для сериализации параметров
-        public T GetParameters<T>()
+        public T GetParameters<T>() //а оно мне надо блин?
         {
             if (string.IsNullOrWhiteSpace(Parameters)) return default!;
             return JsonSerializer.Deserialize<T>(Parameters);
         }
 
-        public void SetParameters<T>(T obj)
+        public void SetParameters<T>(T obj)//и это
         {
             Parameters = JsonSerializer.Serialize(obj);
         }

@@ -8,7 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace GoProTimelapse
 {
-    public abstract class TaskProcessor
+    public abstract class TaskProcessor<TResult>
     {
         public readonly GoProCameraFake _camera;
         private readonly Settings _settings; //??
@@ -18,22 +18,26 @@ namespace GoProTimelapse
             _camera = new GoProCameraFake();
             // _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
-        public abstract Task Execute(string? Parameters = null); //Parameters будет json
+        public abstract Task<TResult> Execute(string? Parameters = null);
 
     }
-
-    public class ProcessPhoto : TaskProcessor
+    public readonly struct Unit
     {
-        public override async Task Execute(string? Parameters = null)
+        public static readonly Unit Value = new();
+    }
+    public class ProcessPhoto : TaskProcessor<Unit>
+    {
+        public override async Task<Unit> Execute(string? Parameters = null)
         {
+            await _camera.SetMode(GoProCameraFake.CameraStatus.Photo);
             await new TakePhoto().Execute();
-            // await new DownloadLastMedia().Execute();
             await new SendMedia().Execute(Parameters);
+            return Unit.Value;
         }
     }
-    public class ProcessTimelapse : TaskProcessor
+    public class ProcessTimelapse : TaskProcessor<Unit>
     {
-        public override async Task Execute(string? Parameters = null)
+        public override async Task<Unit> Execute(string? Parameters = null)
         {
 
             var template = new
@@ -46,6 +50,7 @@ namespace GoProTimelapse
 
             Log.Debug("Время съёмки в милисекундах: {TimelapseDelay}", timelapseDelay); 
 
+            await _camera.SetMode(GoProCameraFake.CameraStatus.Timelapse);
             await _camera.StartTimeLapse();
 
             // await Task.Delay(timelapseDelay);
@@ -59,37 +64,34 @@ namespace GoProTimelapse
                     user = userId,
                     message = "соо ещё не придумала(("
                 };
-                string parameters1 = JsonConvert.SerializeObject(parametersJson);
-                // var parameters1 = System.Text.Json.JsonSerializer.Serialize(parametersJson);
-                await new SendMedia().Execute(parameters1);
+                string parameters = JsonConvert.SerializeObject(parametersJson);
+                await new SendMedia().Execute(parameters);
             }
+            return Unit.Value;
         }
     }
-    public class TakePhoto : TaskProcessor
+    public class TakePhoto : TaskProcessor<Unit>
     {
-        public override async Task Execute(string? Parameters = null)
+        public override async Task<Unit> Execute(string? Parameters = null)
         {
-            Log.Debug("Фото сделано");
+            Log.Debug("Фото сделано👍👍👍");
+            return Unit.Value;
         }
     }
-    public class DownloadLastMedia  //пусть прост не наследует
-                                    //потом может что покруче придумаю
+    public class DownloadLastMedia : TaskProcessor<Stream>
+                                    //теперь наследует, но много текста
+                                    //лол
     {
-        public readonly GoProCameraFake _camera;
-        public DownloadLastMedia()
-        {
-            _camera = new GoProCameraFake();
-        }
-        public async Task<Stream> Execute()
+        public override async Task<Stream> Execute(string? Parameters = null)
         {
             var stream = await _camera.DownloadLastMedia();
             Log.Debug("Медиа скачано");
             return stream;
         }
     }
-    public class SendMedia : TaskProcessor
+    public class SendMedia : TaskProcessor<Unit>
     {
-        public override async Task Execute(string? Parameters = null)
+        public override async Task<Unit> Execute(string? Parameters = null)
         {
             var template = new
             {
@@ -99,10 +101,14 @@ namespace GoProTimelapse
             var data = JsonConvert.DeserializeAnonymousType(Parameters, template);
             var userId = Convert.ToInt64(data.user);
             var message = Convert.ToString(data.message);
+
             var stream = await new DownloadLastMedia().Execute();
+
             Log.Debug("Отправка фото пользователю {userId}", userId);
             await Telegramm.SendPhoto(userId, stream, message);
             Log.Debug("Медиа отправлено");
+
+            return Unit.Value;
         }
     }
 }
