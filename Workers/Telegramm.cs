@@ -102,7 +102,8 @@ namespace GoProTimelapse
                 {
                     var data = update.CallbackQuery.Data;
                     var chatId = update.CallbackQuery.Message.Chat.Id;
-                    await HandleCallbackQuery(chatId, data);
+                    var messageId = update.CallbackQuery.Message.Id;
+                    await HandleCallbackQuery(chatId, data); //пока предположим что такое есть только у план фото
                 }
             }
             catch (Exception ex)
@@ -113,7 +114,19 @@ namespace GoProTimelapse
 
         private async Task HandleCallbackQuery(long chatId, string data)
         {
-            await _bot.SendMessage(chatId, $"вы выбрали: {data}");
+            // await _bot.SendMessage(chatId, $"вы выбрали: {data}");
+            DateTimeOffset scheduledTime = new DateTimeOffset(
+                DateTime.Today.AddHours(int.Parse(data)),
+                TimeSpan.FromHours(5)
+            );
+            if (scheduledTime <= DateTimeOffset.Now)
+            {
+                await _bot.SendMessage(chatId, "не");
+            }
+
+            Log.Debug("фото будет запланировано на {ScheduledTime}", scheduledTime);
+
+            await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
         }
 
         //Обработка команды /start
@@ -195,15 +208,27 @@ namespace GoProTimelapse
                 }
 
 
-                var msg = await _bot.SendHtml(chatId, """
-                    Do you like this photo?
+                var msg = await _bot.SendHtml(chatId, """ 
+                    На какое время??
                     <keyboard>
-                    <button text="Yes" callback="ara-yes">
-                    <button text="No" callback="ara-no">
+                    <button text="9:00" callback="9">
+                    <button text="10:00" callback="10">
+                    <button text="11:00" callback="11">
+                    <button text="12:00" callback="12">
+                    <button text="13:00" callback="13">
+                    <button text="14:00" callback="14">
+                    <row>
+                    <button text="15:00" callback="15">
+                    <button text="16:00" callback="16">
+                    <button text="17:00" callback="17">
+                    <button text="18:00" callback="18">
+                    <button text="19:00" callback="19">
+                    <button text="20:00" callback="20">
                     </keyboard>
-                    """);
+                    """); //потом напишу что нибудь чтобы само генерилось
+                          //и выглядело круче
 
-                await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
+                // await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
             }
             catch (Exception ex)
             {
