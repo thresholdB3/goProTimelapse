@@ -86,7 +86,14 @@ namespace GoProTimelapse
             Log.Debug("Обработка фото...");
             try
             {
-                await new ProcessPhoto().Execute(task.ChatId.ToString());
+                var parametersJson = new 
+                {
+                    UserId = task.ChatId,
+                    Delay = 0
+                };
+                var parameters = JsonSerializer.Serialize(parametersJson);
+
+                await new ProcessPhoto().Execute(parameters);
                 
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;
@@ -105,7 +112,14 @@ namespace GoProTimelapse
             Log.Debug("Обработка запланированного фото...");
             try
             {
-                await new ProcessPhoto().Execute(task.ChatId.ToString());
+                var parametersJson = new 
+                {
+                    UserId = task.ChatId,
+                    Delay = task.Parameters
+                };
+                var parameters = JsonSerializer.Serialize(parametersJson);
+                
+                await new ProcessPhoto().Execute(parameters);
 
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;

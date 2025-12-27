@@ -29,9 +29,27 @@ namespace GoProTimelapse
     {
         public override async Task<Unit> Execute(string? Parameters = null)
         {
+            var template = new
+            {
+                Delay = "",
+                UserId = 0L
+            };
+            var data = JsonConvert.DeserializeAnonymousType(Parameters, template);
+            int delay = Convert.ToInt32(data.Delay);
+
+            await Task.Delay(delay);
+
             await _camera.SetMode(GoProCameraFake.CameraStatus.Photo);
             await new TakePhoto().Execute();
-            await new SendMedia().Execute(Parameters);
+
+            var parametersJson = new 
+            {
+                user = data.UserId,
+                message = "фото👍👍👍"
+            };
+            string parameters = JsonConvert.SerializeObject(parametersJson);
+
+            await new SendMedia().Execute(parameters);
             return Unit.Value;
         }
     }

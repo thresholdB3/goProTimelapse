@@ -8,6 +8,7 @@ using Serilog.Events;
 using System.Diagnostics;
 using Telegram.CalendarKit;
 using Telegram.Bot.Extensions;
+// using Telegram.Bot.Extensions.Polling;
 
 
 namespace GoProTimelapse
@@ -34,7 +35,7 @@ namespace GoProTimelapse
             }
             return _singlet;
         }
-        public static async Task SendPhoto(long? chatId, Stream stream, string text)
+        public static async Task SendPhoto(long? chatId, Stream stream, string text) 
         {
             Log.Debug("Отправка фото пользователю {ChatId}...", chatId);
 
@@ -63,61 +64,56 @@ namespace GoProTimelapse
         {
             try
             {
-                //#########################################################################################
-
-                // if (update is { CallbackQuery: { } query }) // non-null CallbackQuery
-                // {
-                //     Log.Debug("Бот получил апдейт {Update.CallbackQuery}", update.ChosenInlineResult);
-
-                //     // await bot.AnswerCallbackQuery(query.Id, $"You picked {query.Data}");
-                //     // await bot.SendMessage(query.Message!.Chat, $"User {query.From} clicked on {query.Data}");
-                //     // var callbackData = "calendar:prev:2024-12";
-                //     // var parsedData = CalendarBuilder.ParseCalendarCallback(callbackData);
-                //     // Log.Debug("Текущая дата: {ParsedData}", parsedData);
-                    
-                // }
-
-                //###########################################################################################
-
-                if (update.Type != UpdateType.Message || update.Message == null)
-                    return;
-                
-                var message = update.Message;
-                var chatId = (int)message.Chat.Id;
-
-                Log.Debug("Обработка сообщения от пользователя {ChatId}", chatId);
-
-                switch (message.Text)
+                if (update.Type == UpdateType.Message && update.Message != null)
                 {
-                    case "/start":
-                        await HandleStartCommand(chatId, message);
-                        break;
+                    var message = update.Message;
+                    var chatId = (int)message.Chat.Id;
 
-                    case "/photo":
-                        await HandlePhotoCommand(chatId, message);
-                        break;
+                    Log.Debug("Обработка сообщения от пользователя {ChatId}", chatId);
 
-                    case "/scheduledphoto":
-                        await CreateScheduledPhotoCommand(DateTimeOffset.Now.AddMinutes(1), message, chatId);
-                        break;
+                    switch (message.Text)
+                    {
+                        case "/start":
+                            await HandleStartCommand(chatId, message);
+                            break;
 
-                    case "/subscribe":
-                        await Subscribe(chatId, message);
-                        break;
-                    
-                    case "/unsubscribe":
-                        await Unsubscribe(chatId, message);
-                        break;
+                        case "/photo":
+                            await HandlePhotoCommand(chatId, message);
+                            break;
 
-                    default:
-                        await bot.SendMessage(chatId, "Не понял команду");
-                        break;
+                        case "/scheduledphoto":
+                            await CreateScheduledPhotoCommand(DateTimeOffset.Now.AddMinutes(1), message, chatId);
+                            break;
+
+                        case "/subscribe":
+                            await Subscribe(chatId, message);
+                            break;
+                        
+                        case "/unsubscribe":
+                            await Unsubscribe(chatId, message);
+                            break;
+
+                        default:
+                            await bot.SendMessage(chatId, "Не понял команду");
+                            break;
+                    }
+                }
+                if (update.Type == UpdateType.CallbackQuery)
+                {
+                    var data = update.CallbackQuery.Data;
+                    var chatId = update.CallbackQuery.Message.Chat.Id;
+                    await HandleCallbackQuery(chatId, data);
                 }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Ошибка при обработке соо");
             }
+        }
+
+        private async Task HandleCallbackQuery(long chatId, string data)
+        {
+            await _bot.SendMessage(chatId, $"вы выбрали: {data}");
         }
 
         //Обработка команды /start
@@ -198,15 +194,14 @@ namespace GoProTimelapse
                     return;
                 }
 
-                // await calendarBuilder.SendCalendarMessageAsync(_bot, chatId, "Вот ваш календарь:", 2024, 12, CalendarViewType.Default);
-                // var msg = await _bot.SendHtml(chatId, """
-                //     <img src="https://telegrambots.github.io/book/docs/photo-ara.jpg">
-                //     Do you like this photo?
-                //     <keyboard>
-                //     <button text="Yes" callback="ara-yes">
-                //     <button text="No" callback="ara-no">
-                //     </keyboard>
-                //     """);
+
+                var msg = await _bot.SendHtml(chatId, """
+                    Do you like this photo?
+                    <keyboard>
+                    <button text="Yes" callback="ara-yes">
+                    <button text="No" callback="ara-no">
+                    </keyboard>
+                    """);
 
                 await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
             }
