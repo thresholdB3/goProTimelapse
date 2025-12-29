@@ -54,7 +54,7 @@ namespace GoProTimelapse
                         Log.Debug("Начало заката: {Sunset}", sunset);
                         Log.Debug("Конец заката: {CivilTwilightEnd}", civilTwilightEnd);
 
-                        await ScheduleTimelapse(sunset, civilTwilightEnd);
+                        // await ScheduleTimelapse(sunset, civilTwilightEnd);
                     }
                 }
             }

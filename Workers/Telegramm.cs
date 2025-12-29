@@ -8,7 +8,10 @@ using Serilog.Events;
 using System.Diagnostics;
 using Telegram.CalendarKit;
 using Telegram.Bot.Extensions;
-// using Telegram.Bot.Extensions.Polling;
+using Telegram.Bot.Types.ReplyMarkups;
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+
 
 
 namespace GoProTimelapse
@@ -18,6 +21,7 @@ namespace GoProTimelapse
         private readonly TelegramBotClient _bot;
         private readonly AppDbContext _db;
         private static readonly ILogger Log = Serilog.Log.ForContext<Telegramm>();
+        static readonly ConcurrentDictionary<long, DateTimeOffset> DraftDates = new(); //для начала так, потом переделаю
         
 
         private Telegramm(string botToken)
@@ -103,7 +107,7 @@ namespace GoProTimelapse
                     var data = update.CallbackQuery.Data;
                     var chatId = update.CallbackQuery.Message.Chat.Id;
                     var messageId = update.CallbackQuery.Message.Id;
-                    await HandleCallbackQuery(chatId, data); //пока предположим что такое есть только у план фото
+                    await HandleCallbackQuery(chatId, data, messageId); //пока предположим что такое есть только у план фото
                 }
             }
             catch (Exception ex)
@@ -112,21 +116,69 @@ namespace GoProTimelapse
             }
         }
 
-        private async Task HandleCallbackQuery(long chatId, string data)
+        private async Task HandleCallbackQuery(long chatId, string data, int messageId)
         {
-            // await _bot.SendMessage(chatId, $"вы выбрали: {data}");
-            DateTimeOffset scheduledTime = new DateTimeOffset(
-                DateTime.Today.AddHours(int.Parse(data)),
-                TimeSpan.FromHours(5)
-            );
-            if (scheduledTime <= DateTimeOffset.Now)
+            Log.Debug("Обработка апдейта...");
+            if (data[0] == 'D')
             {
-                await _bot.SendMessage(chatId, "не");
+                var scheduledTime = new DateTimeOffset(
+                DateTime.Today.AddDays(data[1] - '0'),
+                TimeSpan.FromHours(5));
+                Log.Debug("Добавляем {s} дней...", data[1]);
+
+                DraftDates[chatId] = scheduledTime;
+
+                var keyboard = await UpdateInline();
+                await _bot.EditMessageText(chatId, messageId, "когда фото??1", replyMarkup: keyboard);
+
+                return;
+            }
+            if (data[0] == 'T')
+            {
+                var scheduledTime = DraftDates[chatId].AddHours(int.Parse(data.Substring(1)));
+                if (scheduledTime <= DateTimeOffset.Now)
+                {
+                    await _bot.SendMessage(chatId, "не");
+                    return;
+                }
+                await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
+                Log.Debug("Запланировано на {ScheduledTime}", scheduledTime);
+            }
+            if (data[0] == 'S')
+            {
+                InlineKeyboardMarkup? keyboard = await UpdateInline(int.Parse(data.Substring(1)));
+                if (keyboard == null)
+                {
+                    return;
+                }
+                await _bot.EditMessageText(chatId, messageId, "когда фото??1", replyMarkup: keyboard);
+                return;
             }
 
-            Log.Debug("фото будет запланировано на {ScheduledTime}", scheduledTime);
+        }
 
-            await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
+        private async Task<InlineKeyboardMarkup> UpdateInline(int Page = 0)
+        {
+            if ((Page < 0) || (Page > 21))
+            {
+                return null;
+            }
+            InlineKeyboardMarkup keyboard = new(new[]
+            {
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData($"{0 + Page}", $"T{0 + Page}"),
+                    InlineKeyboardButton.WithCallbackData($"{1 + Page}", $"T{1 + Page}"),
+                    InlineKeyboardButton.WithCallbackData($"{2 + Page}", $"T{2 + Page}"),
+                },
+                new[]
+                {
+                    InlineKeyboardButton.WithCallbackData("<-", $"S{Page - 3}"),
+                    InlineKeyboardButton.WithCallbackData("->", $"S{Page + 3}"),
+                },
+            });
+            Log.Debug("Страница {s}, кнопки {d} и {g}", Page, Page - 3, Page + 3);
+            return keyboard;
         }
 
         //Обработка команды /start
@@ -207,26 +259,46 @@ namespace GoProTimelapse
                     return;
                 }
 
+                InlineKeyboardMarkup keyboard = new(new[]
+                {
+                    new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData("сегодня", "D0"),
+                        InlineKeyboardButton.WithCallbackData("завтра", "D1"),
+                        InlineKeyboardButton.WithCallbackData("послезавтра", "D2"),
+                    },
+                });
+                // InlineKeyboardMarkup keyboard1 = new(new[]
+                // {
+                //     new[]
+                //     {
+                //         InlineKeyboardButton.WithCallbackData("сегодня1", "0"),
+                //         InlineKeyboardButton.WithCallbackData("завтра1", "1"),
+                //         InlineKeyboardButton.WithCallbackData("послезавтра1", "2"),
+                //     },
+                // });
+                var msg = await _bot.SendMessage(chatId, "когда фото??", replyMarkup: keyboard);
 
-                var msg = await _bot.SendHtml(chatId, """ 
-                    На какое время??
-                    <keyboard>
-                    <button text="9:00" callback="9">
-                    <button text="10:00" callback="10">
-                    <button text="11:00" callback="11">
-                    <button text="12:00" callback="12">
-                    <button text="13:00" callback="13">
-                    <button text="14:00" callback="14">
-                    <row>
-                    <button text="15:00" callback="15">
-                    <button text="16:00" callback="16">
-                    <button text="17:00" callback="17">
-                    <button text="18:00" callback="18">
-                    <button text="19:00" callback="19">
-                    <button text="20:00" callback="20">
-                    </keyboard>
-                    """); //потом напишу что нибудь чтобы само генерилось
+                // var msg = await _bot.SendHtml(chatId, """ 
+                //     На какое время??
+                //     <keyboard>
+                //     <button text="9:00" callback="9">
+                //     <button text="10:00" callback="10">
+                //     <button text="11:00" callback="11">
+                //     <button text="12:00" callback="12">
+                //     <button text="13:00" callback="13">
+                //     <button text="14:00" callback="14">
+                //     <row>
+                //     <button text="15:00" callback="15">
+                //     <button text="16:00" callback="16">
+                //     <button text="17:00" callback="17">
+                //     <button text="18:00" callback="18">
+                //     <button text="19:00" callback="19">
+                //     <button text="20:00" callback="20">
+                //     </keyboard>
+                //     """); //потом напишу что нибудь чтобы само генерилось
                           //и выглядело круче
+                    // await _bot.EditMessageText(chatId, msg.MessageId, "когда фото??1", replyMarkup: keyboard1);
 
                 // await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
             }
