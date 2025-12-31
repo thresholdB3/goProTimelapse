@@ -86,7 +86,11 @@ namespace GoProTimelapse
                             break;
 
                         case "/scheduledphoto":
-                            await CreateScheduledPhotoCommand(DateTimeOffset.Now.AddMinutes(1), message, chatId);
+                            await CreateScheduledPhotoCommand(message, chatId);
+                            break;
+                        
+                        case "/scheduledtimelapse":
+                            await CreateScheduledTimelapseCommand(message, chatId);
                             break;
 
                         case "/subscribe":
@@ -116,37 +120,77 @@ namespace GoProTimelapse
             }
         }
 
-        private async Task HandleCallbackQuery(long chatId, string data, int messageId)
+        private async Task HandleCallbackQuery(long chatId, string data, int messageId)//большая штука, надо поделить на несколько
+                                                                                        //а может и не надо
+                                                                                        //подумать надо
         {
             Log.Debug("Обработка апдейта...");
-            if (data[0] == 'D')
+            if (data[1] == 'D')
             {
                 var scheduledTime = new DateTimeOffset(
-                DateTime.Today.AddDays(data[1] - '0'),
+                DateTime.Today.AddDays(data[2] - '0'),
                 TimeSpan.FromHours(5));
-                Log.Debug("Добавляем {s} дней...", data[1]);
+                Log.Debug("Добавляем {s} дней...", data[2]);
 
                 DraftDates[chatId] = scheduledTime;
 
-                var keyboard = await UpdateInline();
-                await _bot.EditMessageText(chatId, messageId, "когда фото??1", replyMarkup: keyboard);
+                var keyboard = await UpdateInline(data[0]);
+                await _bot.EditMessageText(chatId, messageId, "когда??1", replyMarkup: keyboard);
 
                 return;
             }
-            if (data[0] == 'T')
+            if (data[1] == 'T')
             {
-                var scheduledTime = DraftDates[chatId].AddHours(int.Parse(data.Substring(1)));
+                var scheduledTime = DraftDates[chatId].AddHours(int.Parse(data.Substring(2)));
                 if (scheduledTime <= DateTimeOffset.Now)
                 {
                     await _bot.SendMessage(chatId, "не");
                     return;
                 }
-                await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
-                Log.Debug("Запланировано на {ScheduledTime}", scheduledTime);
+                var Tasks = await _db.Tasks
+                    .Where(t => t.ScheduledAt == scheduledTime)
+                    .ToListAsync();
+                //вот тут крутая проверка на то, есть ли задачи с тем же временем
+                //завтра напишу
+                if (data[0] == 'P')
+                {
+                    await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
+                    Log.Debug("Фото Запланировано на {ScheduledTime}", scheduledTime);
+                    return;
+                }
+                if (data[0] == 'T')
+                {
+                    await CreateTask(TaskType.Timelapse, null, chatId, null, scheduledTime);
+                    Log.Debug("Таймлапс запланирован на {ScheduledTime}", scheduledTime);
+                    return;
+                }
             }
-            if (data[0] == 'S')
+            // if (data[1] == 'L') //пока отложу, запутанно
+                                    //лучше дальше воркерами займусь
+            // {
+            //     // var scheduledTime = new DateTimeOffset(
+            //     // DateTime.Today.AddDays(data[2] - '0'),
+            //     // TimeSpan.FromHours(5));
+            //     // Log.Debug("Добавляем {s} дней...", data[2]);
+
+            //     InlineKeyboardMarkup? keyboard = await UpdateInline(data[0], Step : data[1]);
+            //     if (keyboard == null)
+            //     {
+            //         return;
+            //     }
+
+            //     await _bot.EditMessageText(chatId, messageId, "сколько??2", replyMarkup: keyboard);
+
+            //     // DraftDates[chatId] = scheduledTime;
+
+            //     // var keyboard = await UpdateInline(data[0]);
+
+            //     return;
+            // }
+            if (data[1] == 'S')
             {
-                InlineKeyboardMarkup? keyboard = await UpdateInline(int.Parse(data.Substring(1)));
+                Log.Debug("Ого: {u}", data[0]);
+                InlineKeyboardMarkup? keyboard = await UpdateInline(data[0], Step : data[1], Page : int.Parse(data.Substring(2)));
                 if (keyboard == null)
                 {
                     return;
@@ -157,27 +201,29 @@ namespace GoProTimelapse
 
         }
 
-        private async Task<InlineKeyboardMarkup> UpdateInline(int Page = 0)
+        private async Task<InlineKeyboardMarkup> UpdateInline(char Type, char Step = 'T', int Page = 0)
         {
             if ((Page < 0) || (Page > 21))
             {
                 return null;
             }
+    
             InlineKeyboardMarkup keyboard = new(new[]
             {
                 new[]
                 {
-                    InlineKeyboardButton.WithCallbackData($"{0 + Page}", $"T{0 + Page}"),
-                    InlineKeyboardButton.WithCallbackData($"{1 + Page}", $"T{1 + Page}"),
-                    InlineKeyboardButton.WithCallbackData($"{2 + Page}", $"T{2 + Page}"),
+                    InlineKeyboardButton.WithCallbackData($"{0 + Page}", $"{Type}T{0  + Page}"),
+                    InlineKeyboardButton.WithCallbackData($"{1 + Page}", $"{Type}T{1  + Page}"),
+                    InlineKeyboardButton.WithCallbackData($"{2 + Page}", $"{Type}T{2  + Page}"),
                 },
                 new[]
                 {
-                    InlineKeyboardButton.WithCallbackData("<-", $"S{Page - 3}"),
-                    InlineKeyboardButton.WithCallbackData("->", $"S{Page + 3}"),
+                    InlineKeyboardButton.WithCallbackData("<-", $"{Type}S{Page - 3}"),
+                    InlineKeyboardButton.WithCallbackData("->", $"{Type}S{Page + 3}"),
                 },
             });
             Log.Debug("Страница {s}, кнопки {d} и {g}", Page, Page - 3, Page + 3);
+            Log.Debug($"{Type}{Step}{Page - 3}");
             return keyboard;
         }
 
@@ -246,7 +292,7 @@ namespace GoProTimelapse
             }
         }
 
-        public async Task CreateScheduledPhotoCommand(DateTimeOffset scheduledTime, Message message, int chatId)
+        public async Task CreateScheduledPhotoCommand(Message message, int chatId)
         {
             try
             {
@@ -263,48 +309,48 @@ namespace GoProTimelapse
                 {
                     new[]
                     {
-                        InlineKeyboardButton.WithCallbackData("сегодня", "D0"),
-                        InlineKeyboardButton.WithCallbackData("завтра", "D1"),
-                        InlineKeyboardButton.WithCallbackData("послезавтра", "D2"),
+                        InlineKeyboardButton.WithCallbackData("сегодня", "PD0"),
+                        InlineKeyboardButton.WithCallbackData("завтра", "PD1"),
+                        InlineKeyboardButton.WithCallbackData("послезавтра", "PD2"),
                     },
                 });
-                // InlineKeyboardMarkup keyboard1 = new(new[]
-                // {
-                //     new[]
-                //     {
-                //         InlineKeyboardButton.WithCallbackData("сегодня1", "0"),
-                //         InlineKeyboardButton.WithCallbackData("завтра1", "1"),
-                //         InlineKeyboardButton.WithCallbackData("послезавтра1", "2"),
-                //     },
-                // });
+
                 var msg = await _bot.SendMessage(chatId, "когда фото??", replyMarkup: keyboard);
-
-                // var msg = await _bot.SendHtml(chatId, """ 
-                //     На какое время??
-                //     <keyboard>
-                //     <button text="9:00" callback="9">
-                //     <button text="10:00" callback="10">
-                //     <button text="11:00" callback="11">
-                //     <button text="12:00" callback="12">
-                //     <button text="13:00" callback="13">
-                //     <button text="14:00" callback="14">
-                //     <row>
-                //     <button text="15:00" callback="15">
-                //     <button text="16:00" callback="16">
-                //     <button text="17:00" callback="17">
-                //     <button text="18:00" callback="18">
-                //     <button text="19:00" callback="19">
-                //     <button text="20:00" callback="20">
-                //     </keyboard>
-                //     """); //потом напишу что нибудь чтобы само генерилось
-                          //и выглядело круче
-                    // await _bot.EditMessageText(chatId, msg.MessageId, "когда фото??1", replyMarkup: keyboard1);
-
-                // await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Ошибка при обработке /scheduledphoto");
+            }
+        }
+
+        public async Task CreateScheduledTimelapseCommand(Message message, int chatId)
+        {
+            try
+            {
+                Log.Debug("Обработка /scheduledtimelapse");
+                var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+                if (user == null)
+                {
+                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    return;
+                }
+
+                InlineKeyboardMarkup keyboard = new(new[]
+                {
+                    new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData("сегодня", "TD0"),
+                        InlineKeyboardButton.WithCallbackData("завтра", "TD1"),
+                        InlineKeyboardButton.WithCallbackData("послезавтра", "TD2"),
+                    },
+                });
+
+                var msg = await _bot.SendMessage(chatId, "когда таймлапс??", replyMarkup: keyboard);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка при обработке /scheduledtimelapse");
             }
         }
 
