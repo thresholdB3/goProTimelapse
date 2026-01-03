@@ -5,66 +5,49 @@ using Telegram.Bot;
 using Serilog;
 using Serilog.Events;
 using System.Security.Cryptography.X509Certificates;
+using System.Diagnostics;
 
 namespace GoProTimelapse
 {
-    public abstract class TaskProcessor<TResult>
+    public abstract class TaskProcessor<TArgs, TResult>
     {
         public readonly GoProCameraFake _camera;
-        private readonly Settings _settings; //??
+        // private readonly Settings _settings; //??
         protected ILogger Log => Serilog.Log.ForContext(GetType());
         public TaskProcessor()
         {
             _camera = new GoProCameraFake();
             // _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
-        public abstract Task<TResult> Execute(string? Parameters = null);
+        public abstract Task<TResult> Execute(TArgs args);
 
     }
     public readonly struct Unit
     {
         public static readonly Unit Value = new();
     }
-    public class ProcessPhoto : TaskProcessor<Unit>
+    public record ProcessPhotoArgs(TaskItem Task);
+    public class ProcessPhoto : TaskProcessor<ProcessPhotoArgs, Unit>
     {
-        public override async Task<Unit> Execute(string? Parameters = null)
+        public override async Task<Unit> Execute(ProcessPhotoArgs args)
         {
-            var template = new
-            {
-                Delay = "",
-                UserId = 0L
-            };
-            var data = JsonConvert.DeserializeAnonymousType(Parameters, template);
-            int delay = Convert.ToInt32(data.Delay);
+            int delay = Convert.ToInt32(args.Task.Parameters);
 
             await Task.Delay(delay);
 
             await _camera.SetMode(GoProCameraFake.CameraStatus.Photo);
-            await new TakePhoto().Execute();
+            await new TakePhoto().Execute(Unit.Value);
 
-            var parametersJson = new 
-            {
-                user = data.UserId,
-                message = "фото👍👍👍"
-            };
-            string parameters = JsonConvert.SerializeObject(parametersJson);
-
-            await new SendMedia().Execute(parameters);
+            await new SendMedia().Execute(new SendMediaArgs(args.Task.ChatId, "ogo"));
             return Unit.Value;
         }
     }
-    public class ProcessTimelapse : TaskProcessor<Unit>
+    public record ProcessTimelapseArgs(string TimelapseDelay, List<long> Users);
+    public class ProcessTimelapse : TaskProcessor<ProcessTimelapseArgs, Unit>
     {
-        public override async Task<Unit> Execute(string? Parameters = null)
+        public override async Task<Unit> Execute(ProcessTimelapseArgs args)
         {
-
-            var template = new
-            {
-                TimelapseDelay = "",
-                Users = new long[0]
-            };
-            var data = JsonConvert.DeserializeAnonymousType(Parameters, template);
-            int timelapseDelay = Convert.ToInt32(data.TimelapseDelay);
+            int timelapseDelay = Convert.ToInt32(args.TimelapseDelay);
 
             Log.Debug("Время съёмки в милисекундах: {TimelapseDelay}", timelapseDelay); 
 
@@ -75,55 +58,41 @@ namespace GoProTimelapse
 
             await _camera.StopTimeLapse();
 
-            foreach (var userId in data.Users)
+            foreach (var userId in args.Users)
             {
-                var parametersJson = new 
-                {
-                    user = userId,
-                    message = "соо ещё не придумала(("
-                };
-                string parameters = JsonConvert.SerializeObject(parametersJson);
-                await new SendMedia().Execute(parameters);
+                await new SendMedia().Execute(new SendMediaArgs(userId, "ogo"));
             }
             return Unit.Value;
         }
     }
-    public class TakePhoto : TaskProcessor<Unit>
+    public class TakePhoto : TaskProcessor<Unit, Unit>
     {
-        public override async Task<Unit> Execute(string? Parameters = null)
+        public override async Task<Unit> Execute(Unit args)
         {
             Log.Debug("Фото сделано👍👍👍");
             return Unit.Value;
         }
     }
-    public class DownloadLastMedia : TaskProcessor<Stream>
+    public class DownloadLastMedia : TaskProcessor<Unit, Stream>
                                     //теперь наследует, но много текста
                                     //лол
     {
-        public override async Task<Stream> Execute(string? Parameters = null)
+        public override async Task<Stream> Execute(Unit args)
         {
             var stream = await _camera.DownloadLastMedia();
             Log.Debug("Медиа скачано");
             return stream;
         }
     }
-    public class SendMedia : TaskProcessor<Unit>
+    public record SendMediaArgs(long? User, string Message);
+    public class SendMedia : TaskProcessor<SendMediaArgs, Unit>
     {
-        public override async Task<Unit> Execute(string? Parameters = null)
+        public override async Task<Unit> Execute(SendMediaArgs args)
         {
-            var template = new
-            {
-                user = 0L,
-                message = ""
-            };
-            var data = JsonConvert.DeserializeAnonymousType(Parameters, template);
-            var userId = Convert.ToInt64(data.user);
-            var message = Convert.ToString(data.message);
+            var stream = await new DownloadLastMedia().Execute(Unit.Value);
 
-            var stream = await new DownloadLastMedia().Execute();
-
-            Log.Debug("Отправка фото пользователю {userId}", userId);
-            await Telegramm.SendPhoto(userId, stream, message);
+            Log.Debug("Отправка фото пользователю {userId}", args.User);
+            await Telegramm.SendPhoto(args.User, stream, args.Message);
             Log.Debug("Медиа отправлено");
 
             return Unit.Value;

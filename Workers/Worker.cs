@@ -86,14 +86,7 @@ namespace GoProTimelapse
             Log.Debug("Обработка фото...");
             try
             {
-                var parametersJson = new 
-                {
-                    UserId = task.ChatId,
-                    Delay = 0
-                };
-                var parameters = JsonSerializer.Serialize(parametersJson);
-
-                await new ProcessPhoto().Execute(parameters);
+                await new ProcessPhoto().Execute(new ProcessPhotoArgs(task));
                 
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;
@@ -112,14 +105,7 @@ namespace GoProTimelapse
             Log.Debug("Обработка запланированного фото...");
             try
             {
-                var parametersJson = new 
-                {
-                    UserId = task.ChatId,
-                    Delay = task.Parameters
-                };
-                var parameters = JsonSerializer.Serialize(parametersJson);
-                
-                await new ProcessPhoto().Execute(parameters);
+                await new ProcessPhoto().Execute(new ProcessPhotoArgs(task));
 
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;
@@ -151,15 +137,7 @@ namespace GoProTimelapse
                     Log.Debug("Добавлен пользователь {user.Username}", user.Username);
                 }
 
-                var parametersJson = new 
-                {
-                    Users = userId,
-                    TimelapseDelay = task.Parameters
-                };
-                var parameters = JsonSerializer.Serialize(parametersJson);//потом путь принимает сразу json наверное
-                                                                            //НЕТТТ остальным методам json не нужен, так проще
-
-                await new ProcessTimelapse().Execute(parameters);
+                await new ProcessTimelapse().Execute(new ProcessTimelapseArgs(task.Parameters, userId));
 
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;
