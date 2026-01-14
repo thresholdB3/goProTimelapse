@@ -26,7 +26,6 @@ namespace GoProTimelapse
 
         public GoProCameraFake()
         {
-
             _httpClient = new HttpClient();
         }
 

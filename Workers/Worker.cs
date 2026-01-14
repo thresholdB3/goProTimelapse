@@ -69,8 +69,15 @@ namespace GoProTimelapse
                     }else if (task.Type == TaskType.Timelapse)
                     {
                         var timelapseDelay = task.ScheduledAt.Value - DateTimeOffset.Now;
-                        // await Task.Delay(timelapseDelay);
-                        Log.Debug("Таймлапс отложен(нет) на {TimelapseDelay} милисекунд", timelapseDelay);
+                        Log.Debug("Таймлапс отложен на {TimelapseDelay} милисекунд", timelapseDelay);
+                        if (timelapseDelay.TotalMilliseconds < 0) //чтобы не падало, потом покрасивше сделать
+                        {
+                            await Task.Delay(0);
+                        }
+                        else
+                        {
+                            await Task.Delay(timelapseDelay);
+                        }
                         await HandleTimelapse(task);
                     }
                 }

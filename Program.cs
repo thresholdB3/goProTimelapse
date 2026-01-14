@@ -41,6 +41,11 @@ namespace GoProTimelapse
             {
                 Log.Information("Запуск приложения");
 
+                using (var db = new AppDbContext()) //чтобы бд создавалась нормально
+                {
+                    db.Database.Migrate();
+                }
+
                 var settings = Settings.ReadSettings();
                 var telegramBot = Telegramm.CreateSingleton(settings.Telegramm.botToken);
                 var worker = new Worker(settings);

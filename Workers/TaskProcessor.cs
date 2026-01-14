@@ -54,7 +54,7 @@ namespace GoProTimelapse
             await _camera.SetMode(GoProCameraFake.CameraStatus.Timelapse);
             await _camera.StartTimeLapse();
 
-            // await Task.Delay(timelapseDelay);
+            await Task.Delay(timelapseDelay);
 
             await _camera.StopTimeLapse();
 
