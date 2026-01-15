@@ -14,7 +14,7 @@ namespace GoProTimelapse
     {
         private readonly Settings _settings;
         private readonly HttpClient _httpClient;
-        public bool isBusy { get; set; }
+        public static bool isBusy { get; set; }
         private static readonly ILogger Log = Serilog.Log.ForContext<GoProCameraFake>();
         public enum CameraStatus
         {
@@ -29,7 +29,10 @@ namespace GoProTimelapse
             _httpClient = new HttpClient();
         }
 
-
+        // public bool CameraStatus1()
+        // {
+        //     return isBusy;
+        // }
         public async Task SetMode(CameraStatus mode)
         {
             Log.Debug("переключение режима на {mode}...", mode);

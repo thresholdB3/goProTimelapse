@@ -147,21 +147,33 @@ namespace GoProTimelapse
                     await _bot.SendMessage(chatId, "не");
                     return;
                 }
-                var Tasks = await _db.Tasks
-                    .Where(t => t.ScheduledAt == scheduledTime)
-                    .ToListAsync();
+                // var Tasks = await _db.Tasks
+                //     .Where(t => t.ScheduledAt == scheduledTime)
+                //     .ToListAsync();
                 //вот тут крутая проверка на то, есть ли задачи с тем же временем
                 //завтра напишу
+                
+                bool exist = await _db.Tasks
+                    .AnyAsync(t => t.ScheduledAt == scheduledTime);
+                if (exist)
+                {
+                    await _bot.SendMessage(chatId, "камера занята, попробуй другое время (￣ ￣|||)");
+                    return;
+                }
                 if (data[0] == 'P')
                 {
                     await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
                     Log.Debug("Фото Запланировано на {ScheduledTime}", scheduledTime);
+                    await _bot.SendMessage(chatId, "фото запланировано (*￣▽￣)b");
+                    await _bot.DeleteMessage(chatId, messageId);
                     return;
                 }
                 if (data[0] == 'T')
                 {
                     await CreateTask(TaskType.Timelapse, null, chatId, null, scheduledTime);
                     Log.Debug("Таймлапс запланирован на {ScheduledTime}", scheduledTime);
+                    await _bot.SendMessage(chatId, "таймлапс запланирован (*￣▽￣)b");
+                    await _bot.DeleteMessage(chatId, messageId);
                     return;
                 }
             }
@@ -277,6 +289,12 @@ namespace GoProTimelapse
                 if (user == null)
                 {
                     await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    return;
+                }
+
+                if (GoProCameraFake.isBusy == true)
+                {
+                    await _bot.SendMessage(chatId, "камера занята, попробуй позже (￣ ￣|||)");
                     return;
                 }
 
