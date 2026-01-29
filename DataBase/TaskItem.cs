@@ -3,20 +3,7 @@ using System.Text.Json;
 
 namespace GoProTimelapse
 {
-    public enum TaskType
-    {
-        Photo,
-        Timelapse,
-        RenderVideo
-    }
-
-    public enum TaskStatus
-    {
-        Created,
-        InProgress,
-        Completed,
-        Failed
-    }
+    
 
     public class TaskItem
     {

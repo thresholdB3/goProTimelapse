@@ -59,7 +59,7 @@ namespace GoProTimelapse
                                 var photoDelay = task.ScheduledAt.Value - DateTimeOffset.Now;
                                 await Task.Delay(photoDelay);
                                 Log.Debug("Фото отложено на {PhotoDelay} милисекунд", photoDelay);
-                                await HandleScheduledPhotoTask(task);
+                                await HandlePhotoTask(task);
                             });
                         }
                         else
@@ -93,7 +93,7 @@ namespace GoProTimelapse
             Log.Debug("Обработка фото...");
             try
             {
-                await new ProcessPhoto().Execute(new ProcessPhotoArgs(task));
+                await new ProcessPhoto().Execute(new ProcessPhotoArgs(task) );
                 
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;
@@ -107,24 +107,24 @@ namespace GoProTimelapse
             }
         }
 
-        private async Task HandleScheduledPhotoTask(TaskItem task)
-        {
-            Log.Debug("Обработка запланированного фото...");
-            try
-            {
-                await new ProcessPhoto().Execute(new ProcessPhotoArgs(task));
+        //private async Task HandleScheduledPhotoTask(TaskItem task)
+        //{
+        //    Log.Debug("Обработка запланированного фото...");
+        //    try
+        //    {
+        //        await new ProcessPhoto().Execute(new ProcessPhotoArgs(task));
 
-                task.Status = TaskStatus.Completed;
-                task.FinishedAt = DateTimeOffset.Now;
-                await _db.SaveChangesAsync();
-                Log.Debug("Запланированное фото обработано!");
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Ошибка при обработке запланированного фото");
-            }
+        //        task.Status = TaskStatus.Completed;
+        //        task.FinishedAt = DateTimeOffset.Now;
+        //        await _db.SaveChangesAsync();
+        //        Log.Debug("Запланированное фото обработано!");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Log.Error(ex, "Ошибка при обработке запланированного фото");
+        //    }
             
-        }
+        //}
 
         private async Task HandleTimelapse(TaskItem task)
         {
@@ -136,15 +136,15 @@ namespace GoProTimelapse
                     .ToListAsync();
                 Log.Debug("Пользователи с подпиской найдены");
 
-                List<long> userId = new List<long>();
+                List<long> userIdList = new List<long>();
 
                 foreach (var user in subscribedUsers)
                 {
-                    userId.Add(user.TGUserId);
+                    userIdList.Add(user.TGUserId);
                     Log.Debug("Добавлен пользователь {user.Username}", user.Username);
                 }
 
-                await new ProcessTimelapse().Execute(new ProcessTimelapseArgs(task.Parameters, userId));
+                await new ProcessTimelapse().Execute(new ProcessTimelapseArgs(task.Parameters, userIdList));
 
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;

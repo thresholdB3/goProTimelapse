@@ -22,6 +22,7 @@ namespace GoProTimelapse
             _db = new AppDbContext();
             latitude = 56.8386;   //широта
             longitude = 60.6055;  //долгота
+            //todo: вынести в appsettings широту долготу👍👍👍👍👍👍👍👍ы
         }
         public async Task StartAsync(CancellationToken token)
         {
@@ -54,7 +55,8 @@ namespace GoProTimelapse
                         Log.Debug("Начало заката: {Sunset}", sunset);
                         Log.Debug("Конец заката: {CivilTwilightEnd}", civilTwilightEnd);
 
-                        await ScheduleTimelapse(sunset, civilTwilightEnd);
+                        //await ScheduleTimelapse(sunset, civilTwilightEnd);
+                        await ScheduleTimelapse(DateTimeOffset.Now.AddSeconds(3), DateTimeOffset.Now.AddSeconds(30));
                     }
                 }
             }
@@ -70,7 +72,7 @@ namespace GoProTimelapse
             try
             {
                 Log.Debug("Создание задачи...");
-                var timelapseTime = (sunsetTime2 - sunsetTime).TotalMilliseconds;
+                var timelapseTime = (sunsetTime2 - sunsetTime);
                 Log.Debug("Время таймлапса в миллисекундах: {timelapseTime}", timelapseTime);
 
                 var task = new TaskItem

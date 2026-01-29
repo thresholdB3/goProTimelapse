@@ -6,26 +6,12 @@ using System.Threading.Tasks;
 
 namespace GoProTimelapse
 {
-    //DD: тема интерфейсов (изучить)
-    //для камер делаем вот такой интерфейс, работаем с ним так
-    //интерфейс пусть реализует и фейковый класс, и настоящая камера.
-    //когда появится доступ к камере - ты просто подменяешь реализацию с фейка на настоящю и вуаля, волшебство=)
-
-    //описал пока очень абстрактно - конечно тут добавятся детали.
-    //У меня , например, еще есть получение статуса камеры
-    //и проверка - на связи ли она 
-
     internal interface ICamera
     {
-        public static bool isBusy { get; set; }
-        public Task SetMode(GoProCameraFake.CameraStatus mode); //помоему как то не очень, потом переделаю
+        public bool isBusy { get; set; }
+        extern private Task SetMode(CameraStatus mode);
         public Task TakePhoto(); 
-        public Task StartTimeLapse();
-        public Task StopTimeLapse();
-        public Task<Stream> DownloadLastMedia(); //+удаление с камеры
-
-        // public Task<byte[]> GetLastVideo(); //+удаление с камеры //не одно и то же с тем что выше??
-
-
+        public Task MakeTimelapse(TimeSpan delay);
+        public Task<byte[]> DownloadLastMedia(MediaType Type); //todo: +удаление с камеры
     }
 }

@@ -14,26 +14,27 @@ namespace GoProTimelapse
     {
         private readonly Settings _settings;
         private readonly HttpClient _httpClient;
-        public static bool isBusy { get; set; }
+        public bool isBusy { get; set; }
         private static readonly ILogger Log = Serilog.Log.ForContext<GoProCameraFake>();
-        public enum CameraStatus
-        {
-            Timelapse,
-            Photo,
-            Video
-        }
-        
+    
 
-        public GoProCameraFake()
+        //todo: 
+        private GoProCameraFake()
         {
+
             _httpClient = new HttpClient();
         }
-
-        // public bool CameraStatus1()
-        // {
-        //     return isBusy;
-        // }
-        public async Task SetMode(CameraStatus mode)
+        private static GoProCameraFake _singlet;
+        public static GoProCameraFake CreateSingleton()
+        {
+            if (_singlet == null)
+            {
+                _singlet = new GoProCameraFake();
+                Log.Debug("Камера создана <(-*-)>");
+            }
+            return _singlet;
+        }
+        private async Task SetMode(CameraStatus mode)//будет в самой камере использоваться в методах и private
         {
             Log.Debug("переключение режима на {mode}...", mode);
             //не помню какой режим за что, но 1 - это фото, остальные потом гляну
@@ -45,25 +46,35 @@ namespace GoProTimelapse
             await Task.Delay(1000);
         }
 
-        public async Task StartTimeLapse()
+        public async Task<byte[]> DownloadLastMedia(MediaType Type) //будет аргумет видео или фото
         {
+            byte[] placeholder;
+            if (Type == MediaType.Photo)
+            {
+                placeholder = File.ReadAllBytes(@"GoProPhotos\1.jpg");
+                await Storage.SaveFile(placeholder, ".jpg"); //todo: сделать константы для расширений
+            }
+            else
+            {
+                placeholder = File.ReadAllBytes(@"GoProPhotos\ogo.mp4");
+                await Storage.SaveFile(placeholder, ".mp4");
+            }
+            return placeholder;
+        }
+
+        public async Task MakeTimelapse(TimeSpan delay)
+        {
+            await SetMode(CameraStatus.Timelapse);
             isBusy = true;
             Log.Information("Камера начинает снимать таймлапс...");
-        }
-        public async Task StopTimeLapse()
-        {
+
+            await Task.Delay(delay);
+
             isBusy = false;
             Log.Information("Камера закончила таймлапс:)");
         }
-        public async Task<Stream> DownloadLastMedia()
-        {
-            Stream placeholder = File.OpenRead(@"GoProPhotos\1.jpg");
-            return placeholder;
-        }
-        // public async Task<byte[]> GetLastVideo()
-        // {
-        //     byte[] placeholder = await File.ReadAllBytesAsync("тут путь указать к видео");
-        //     return placeholder;
-        // }
+
+        //public startvideo
+        //public stopvideo
     }
 }

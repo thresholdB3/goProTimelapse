@@ -6,6 +6,7 @@ namespace GoProTimelapse
     {
         public DbSet<User> Users { get; set; }
         public DbSet<TaskItem> Tasks { get; set; }
+        public DbSet<MediaItem> Media {  get; set; }
 
         public AppDbContext() { }
 
@@ -32,6 +33,18 @@ namespace GoProTimelapse
 
             modelBuilder.Entity<User>()
                 .Property(u => u.TGUserId)
+                .IsRequired();
+
+            modelBuilder.Entity<MediaItem>()
+                .Property(m => m.SaveTime)
+                .IsRequired();
+
+            modelBuilder.Entity<MediaItem>()
+                .Property(m => m.FileName)
+                .IsRequired();
+
+            modelBuilder.Entity<MediaItem>()
+                .Property(m => m.Extenstion)
                 .IsRequired();
 
             modelBuilder.Entity<TaskItem>(entity =>

@@ -22,12 +22,13 @@ namespace GoProTimelapse
         private readonly AppDbContext _db;
         private static readonly ILogger Log = Serilog.Log.ForContext<Telegramm>();
         static readonly ConcurrentDictionary<long, DateTimeOffset> DraftDates = new(); //для начала так, потом переделаю
-        
+        private readonly GoProCameraFake _camera;
 
         private Telegramm(string botToken)
         {
             _bot = new TelegramBotClient(botToken);
             _db = new AppDbContext();
+            _camera = GoProCameraFake.CreateSingleton();
         }
         private static Telegramm _singlet;
         public static Telegramm CreateSingleton(string token)
@@ -39,17 +40,23 @@ namespace GoProTimelapse
             }
             return _singlet;
         }
-        public static async Task SendPhoto(long? chatId, Stream stream, string text) 
+        public static async Task SendMedia(long? chatId, Stream stream, string text, MediaType type) 
         {
             Log.Debug("Отправка фото пользователю {ChatId}...", chatId);
 
-            await _singlet._bot.SendPhoto(chatId, stream, caption: text);
-
+            if (type == MediaType.Photo)
+            {
+                await _singlet._bot.SendPhoto(chatId, stream, caption: text);
+            }
+            else
+            {
+                await _singlet._bot.SendVideo(chatId, stream, caption: text);
+            }
             Log.Debug("Фото отправлено!");
         }
 
         //Запуск слушателя
-        public async Task StartAsync()
+        public async Task StartAsync(CancellationToken cts)
         {
             Log.Information("Запуск бота...");
             var me = await _bot.GetMe();
@@ -57,7 +64,8 @@ namespace GoProTimelapse
 
             _bot.StartReceiving(
                 HandleUpdateAsync,
-                HandleErrorAsync
+                HandleErrorAsync,
+                cancellationToken: cts
             );
 
             Console.ReadLine();
@@ -75,7 +83,7 @@ namespace GoProTimelapse
 
                     Log.Debug("Обработка сообщения от пользователя {ChatId}", chatId);
 
-                    switch (message.Text)
+                    switch (message.Text) //todo: getLastPhoto, getLastVideo, написать что нужно ещё доделать в проекте до конца первым делом
                     {
                         case "/start":
                             await HandleStartCommand(chatId, message);
@@ -292,7 +300,7 @@ namespace GoProTimelapse
                     return;
                 }
 
-                if (GoProCameraFake.isBusy == true)
+                if (_camera.isBusy == true)
                 {
                     await _bot.SendMessage(chatId, "камера занята, попробуй позже (￣ ￣|||)");
                     return;

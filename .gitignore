@@ -1,8 +1,10 @@
 bin/
 obj/
 GoProPhotos/
-
 Logs/
+.vs/
+
+
 ffmpeg.exe
 ffprobe.exe
 appsettings.json

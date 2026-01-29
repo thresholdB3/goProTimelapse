@@ -54,7 +54,7 @@ namespace GoProTimelapse
                 var cts = new CancellationTokenSource();
 
                 Log.Information("Запускаем все задачи...");
-                var botTask = telegramBot.StartAsync();
+                var botTask = telegramBot.StartAsync(cts.Token);
                 var workerTask = worker.StartAsync(cts.Token);
                 var sunsetPlannerTask = sunsetPlanner.StartAsync(cts.Token);
 
@@ -64,7 +64,7 @@ namespace GoProTimelapse
                 Log.Information("Останавливаем приложение...");
                 cts.Cancel();
 
-                await Task.WhenAll(botTask, workerTask, sunsetPlannerTask);
+                //await Task.WhenAll(botTask, workerTask);
 
                 Log.Information("Все задачи завершены. Выход.");
             }
