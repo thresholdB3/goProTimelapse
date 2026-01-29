@@ -56,7 +56,7 @@ namespace GoProTimelapse
                         Log.Debug("Конец заката: {CivilTwilightEnd}", civilTwilightEnd);
 
                         //await ScheduleTimelapse(sunset, civilTwilightEnd);
-                        await ScheduleTimelapse(DateTimeOffset.Now.AddSeconds(3), DateTimeOffset.Now.AddSeconds(30));
+                        //await ScheduleTimelapse(DateTimeOffset.Now.AddSeconds(3), DateTimeOffset.Now.AddSeconds(30));
                     }
                 }
             }

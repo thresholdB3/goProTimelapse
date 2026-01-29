@@ -46,10 +46,10 @@ namespace GoProTimelapse
             await Task.Delay(1000);
         }
 
-        public async Task<byte[]> DownloadLastMedia(MediaType Type) //будет аргумет видео или фото
+        public async Task<byte[]> DownloadLastMedia(string Type) //будет аргумет видео или фото
         {
             byte[] placeholder;
-            if (Type == MediaType.Photo)
+            if (Type == "jpg")
             {
                 placeholder = File.ReadAllBytes(@"GoProPhotos\1.jpg");
                 await Storage.SaveFile(placeholder, ".jpg"); //todo: сделать константы для расширений

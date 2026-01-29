@@ -28,7 +28,7 @@ namespace GoProTimelapse
 
             await _camera.MakeTimelapse(timelapseDelay);
 
-            var media = await _camera.DownloadLastMedia(MediaType.Video);
+            var media = await _camera.DownloadLastMedia("mp4");
             //await Storage.SaveFile(media, ".mp4");
             Stream stream = new MemoryStream(media);
 

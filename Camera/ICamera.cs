@@ -12,6 +12,6 @@ namespace GoProTimelapse
         extern private Task SetMode(CameraStatus mode);
         public Task TakePhoto(); 
         public Task MakeTimelapse(TimeSpan delay);
-        public Task<byte[]> DownloadLastMedia(MediaType Type); //todo: +удаление с камеры
+        public Task<byte[]> DownloadLastMedia(string Type); //todo: +удаление с камеры
     }
 }

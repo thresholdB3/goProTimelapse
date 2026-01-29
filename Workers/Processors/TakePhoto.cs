@@ -10,6 +10,7 @@ namespace GoProTimelapse
     {
         public override async Task Execute(ProcessorArgs? args = null)
         {
+            _camera.TakePhoto();
             Log.Debug("Фото сделано👍👍👍");
              await Task.CompletedTask;
         }
