@@ -38,7 +38,7 @@ namespace GoProTimelapse
             Log.Debug("переключение режима на {mode}...", mode);
 
             //не помню какой режим за что, но 1 - это фото, остальные потом гляну
-            string url = $"${_settings.GoPro.Urls.BaseUrl}/gp/gpControl/command/mode?p=${mode}";
+            string url = $"{_settings.GoPro.Urls.BaseUrl}/gp/gpControl/command/mode?p={(int)mode}";
             await _httpClient.GetAsync(url);
 
             await Task.Delay(3000); //3 секунды на переключение режима

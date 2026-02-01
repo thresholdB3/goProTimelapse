@@ -28,7 +28,7 @@ namespace GoProTimelapse
 
             await new TakePhoto().Execute();
 
-            Task.Delay(5000);
+            await Task.Delay(5000);
 
             var media = await _camera.DownloadLastMedia(".jpg");
             //await Storage.SaveFile(media, ".jpg");
