@@ -76,7 +76,8 @@ namespace GoProTimelapse
                         }
                         else
                         {
-                            await Task.Delay(timelapseDelay);
+                            //await Task.Delay(timelapseDelay);
+                            await Task.Delay(0);//ПОТОМ ПОМЕНЯТЬ АААААААААААА
                         }
                         await HandleTimelapse(task);
                     }

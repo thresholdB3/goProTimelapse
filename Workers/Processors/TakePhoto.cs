@@ -8,7 +8,7 @@ namespace GoProTimelapse
 {
     public class TakePhoto : TaskProcessor
     {
-        public override async Task Execute(ProcessorArgs? args = null)
+        public override async Task Execute(ProcessorArgs? args = null) //todo: а это зачем лол
         {
             _camera.TakePhoto();
             Log.Debug("Фото сделано👍👍👍");

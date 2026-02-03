@@ -96,40 +96,44 @@ namespace GoProTimelapse
             await SetMode(CameraStatus.Timelapse);
             isBusy = true;
             Log.Information("Камера начинает снимать таймлапс...");
+            await _httpClient.GetAsync(_settings.GoPro.Commands.Trigger);
 
             await Task.Delay(delay);
+
+            await _httpClient.GetAsync(_settings.GoPro.Commands.Stop);
+            await Task.Delay(5000);
 
             isBusy = false;
             Log.Information("Камера закончила таймлапс:)");
         }
 
-        public async Task DownloadLastPhotoAsync(string fileName)
-        {
-            string folderUrl = _settings.GoPro.Urls.FolderUrl;
-            string mediaUrl = _settings.GoPro.Urls.MediaUrl;
-            string mediaHtml = _settings.GoPro.Urls.MediaHtml;
-            string downloadFolder = _settings.Base.DownloadFolder;
+        //public async Task DownloadLastPhotoAsync(string fileName)
+        //{
+        //    string folderUrl = _settings.GoPro.Urls.FolderUrl;
+        //    string mediaUrl = _settings.GoPro.Urls.MediaUrl;
+        //    string mediaHtml = _settings.GoPro.Urls.MediaHtml;
+        //    string downloadFolder = _settings.Base.DownloadFolder;
 
-            if (!Directory.Exists(downloadFolder))
-                Directory.CreateDirectory(downloadFolder);
+        //    if (!Directory.Exists(downloadFolder))
+        //        Directory.CreateDirectory(downloadFolder);
 
-            var folderHtml = await _httpClient.GetStringAsync(folderUrl);
-            var fileMatches = Regex.Matches(folderHtml, mediaHtml + @"([^""]+\.JPG)""");//ищет файлы типа GOPR1234.JPG
+        //    var folderHtml = await _httpClient.GetStringAsync(folderUrl);
+        //    var fileMatches = Regex.Matches(folderHtml, mediaHtml + @"([^""]+\.JPG)""");//ищет файлы типа GOPR1234.JPG
 
-            var lastFile = fileMatches //поиск последнего
-                .Select(m => $"100GOPRO/{m.Groups[1].Value}")
-                .OrderBy(name => name)
-                .Last();
+        //    var lastFile = fileMatches //поиск последнего
+        //        .Select(m => $"100GOPRO/{m.Groups[1].Value}")
+        //        .OrderBy(name => name)
+        //        .Last();
 
-            var fileUrl = $"{mediaUrl}/{lastFile}";
-            var localPath = Path.Combine(downloadFolder, fileName);
+        //    var fileUrl = $"{mediaUrl}/{lastFile}";
+        //    var localPath = Path.Combine(downloadFolder, fileName);
 
-            var data = await _httpClient.GetByteArrayAsync(fileUrl);
-            await File.WriteAllBytesAsync(localPath, data);
-            await Task.Delay(6000);//6 секунд на загрузку
+        //    var data = await _httpClient.GetByteArrayAsync(fileUrl);
+        //    await File.WriteAllBytesAsync(localPath, data);
+        //    await Task.Delay(6000);//6 секунд на загрузку
 
-            await _httpClient.GetAsync("http://10.5.5.9/gp/gpControl/command/storage/delete/last");
-        }
+        //    await _httpClient.GetAsync("http://10.5.5.9/gp/gpControl/command/storage/delete/last");
+        //}
         //public async Task SetPhotoModeAsync()
         //{
         //    string url = _settings.GoPro.Urls.BaseUrl + "/gp/gpControl/command/mode?p=1";

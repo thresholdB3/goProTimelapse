@@ -27,8 +27,9 @@ namespace GoProTimelapse
             Log.Debug("Время съёмки в милисекундах: {TimelapseDelay}", timelapseDelay);
 
             await _camera.MakeTimelapse(timelapseDelay);
+            await Task.Delay(5000);
 
-            var media = await _camera.DownloadLastMedia("mp4");
+            var media = await _camera.DownloadLastMedia(".mp4");
             //await Storage.SaveFile(media, ".mp4");
             Stream stream = new MemoryStream(media);
 

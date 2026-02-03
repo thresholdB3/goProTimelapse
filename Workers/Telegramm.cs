@@ -1,16 +1,17 @@
-using Telegram.Bot;
-using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
 using Microsoft.EntityFrameworkCore;
-using System.IO;
 using Serilog;
 using Serilog.Events;
-using System.Diagnostics;
-using Telegram.CalendarKit;
-using Telegram.Bot.Extensions;
-using Telegram.Bot.Types.ReplyMarkups;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
+using Telegram.Bot;
+using Telegram.Bot.Extensions;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
+using Telegram.CalendarKit;
+using static System.Net.Mime.MediaTypeNames;
 
 
 
@@ -109,6 +110,9 @@ namespace GoProTimelapse
                             await Unsubscribe(chatId, message);
                             break;
 
+                        case "/lastphoto":
+                            await GetLastPhoto(chatId, message);
+                            break;
                         default:
                             await bot.SendMessage(chatId, "Не понял команду");
                             break;
@@ -178,7 +182,7 @@ namespace GoProTimelapse
                 }
                 if (data[0] == 'T')
                 {
-                    await CreateTask(TaskType.Timelapse, null, chatId, null, scheduledTime);
+                    await CreateTask(TaskType.Timelapse, TimeSpan.FromMinutes(5).ToString(), chatId, null, scheduledTime);
                     Log.Debug("Таймлапс запланирован на {ScheduledTime}", scheduledTime);
                     await _bot.SendMessage(chatId, "таймлапс запланирован (*￣▽￣)b");
                     await _bot.DeleteMessage(chatId, messageId);
@@ -284,6 +288,19 @@ namespace GoProTimelapse
             {
                 Log.Error(ex, "Ошибка при обработке /start");
             }
+        }
+        private async Task GetLastPhoto(int chatId, Message message)
+        {
+            Log.Debug("Обработка /lastphoto");
+            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                return;
+            }
+            var Photo = await Storage.GetLastFile(".jpg");
+            await _bot.SendPhoto(chatId, Photo, caption: "Последнее фото с камеры");
         }
 
         //Обработка команды /photo

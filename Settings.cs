@@ -43,6 +43,7 @@ namespace GoProTimelapse
         public string CameraSSID { get; set; }
         public string CameraPassword { get; set; }
         public GoProUrls Urls { get; set; }
+        public GoProCommands Commands { get; set; } 
     }
 
     public class GoProUrls
@@ -51,6 +52,13 @@ namespace GoProTimelapse
         public string MediaUrl { get; set; }
         public string FolderUrl { get; set; }
         public string MediaHtml { get; set; }
+    }
+
+    public class GoProCommands
+    {
+        public string SetMode { get; set; }
+        public string Trigger { get; set; }
+        public string Stop { get; set; }
     }
 
     public class TimelapsSettings

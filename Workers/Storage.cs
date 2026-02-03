@@ -50,7 +50,8 @@ namespace GoProTimelapse
 
             var lastMedia = _db.Media
                 .Where(m => m.Extenstion == extension)
-                .OrderByDescending(m => m.SaveTime)
+                .AsEnumerable() //потом может чутка переделаб
+                .OrderByDescending(m => m.SaveTime.UtcDateTime)
                 .FirstOrDefault();
 
             Log.Debug("найдено медиа с ключом {x}, временем сохранения {y}", lastMedia.FileName, lastMedia.SaveTime);
