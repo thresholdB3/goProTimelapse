@@ -55,7 +55,7 @@ namespace GoProTimelapse
                         Log.Debug("Начало заката: {Sunset}", sunset);
                         Log.Debug("Конец заката: {CivilTwilightEnd}", civilTwilightEnd);
 
-                        //await ScheduleTimelapse(sunset, civilTwilightEnd);
+                        await ScheduleTimelapse(sunset, civilTwilightEnd);
                         //await ScheduleTimelapse(DateTimeOffset.Now.AddSeconds(3), DateTimeOffset.Now.AddSeconds(30));
                     }
                 }
@@ -80,8 +80,8 @@ namespace GoProTimelapse
                     Type = TaskType.Timelapse,
                     Status = TaskStatus.Created,
                     CreatedAt = DateTimeOffset.Now,
-                    ScheduledAt = sunsetTime, //потом поменять на sunsetTime
-                    Parameters = timelapseTime.ToString() //надо будет (нормально) передавать длительность в параметрах задачи
+                    ScheduledAt = sunsetTime,
+                    Parameters = timelapseTime.ToString()
                 };
                
                 _db.Tasks.Add(task);

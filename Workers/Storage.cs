@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Serilog;
+using Serilog.Events;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-using Serilog;
-using Serilog.Events;
 
 namespace GoProTimelapse
 {
@@ -22,6 +22,11 @@ namespace GoProTimelapse
             using var _db = new AppDbContext();
 
             var filename = Guid.NewGuid();
+
+            if (!Directory.Exists("GoProPhotos"))
+            {
+                Directory.CreateDirectory("GoProPhotos");
+            }
             await File.WriteAllBytesAsync(@"GoProPhotos\" + filename.ToString() + extenstion, data);//реальная камера возвращает массив байтиков
             Log.Debug("Файл сохранён на диск");
 

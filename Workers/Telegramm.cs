@@ -4,6 +4,7 @@ using Serilog.Events;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Runtime.CompilerServices;
 using Telegram.Bot;
 using Telegram.Bot.Extensions;
@@ -24,10 +25,21 @@ namespace GoProTimelapse
         private static readonly ILogger Log = Serilog.Log.ForContext<Telegramm>();
         static readonly ConcurrentDictionary<long, DateTimeOffset> DraftDates = new(); //для начала так, потом переделаю
         private readonly GoProCameraFake _camera;
+        
+
 
         private Telegramm(string botToken)
         {
-            _bot = new TelegramBotClient(botToken);
+            var handler = new HttpClientHandler();
+            var httpClient = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromMinutes(30)
+            };
+            var options = new TelegramBotClientOptions(
+                token: botToken,
+                baseUrl: "http://127.0.0.1:8081"
+            );
+            _bot = new TelegramBotClient(options, httpClient);
             _db = new AppDbContext();
             _camera = GoProCameraFake.CreateSingleton();
         }
@@ -84,7 +96,7 @@ namespace GoProTimelapse
 
                     Log.Debug("Обработка сообщения от пользователя {ChatId}", chatId);
 
-                    switch (message.Text) //todo: getLastPhoto, getLastVideo, написать что нужно ещё доделать в проекте до конца первым делом
+                    switch (message.Text) //todo: getLastVideo, написать что нужно ещё доделать в проекте до конца первым делом
                     {
                         case "/start":
                             await HandleStartCommand(chatId, message);
@@ -123,7 +135,7 @@ namespace GoProTimelapse
                     var data = update.CallbackQuery.Data;
                     var chatId = update.CallbackQuery.Message.Chat.Id;
                     var messageId = update.CallbackQuery.Message.Id;
-                    await HandleCallbackQuery(chatId, data, messageId); //пока предположим что такое есть только у план фото
+                    await HandleCallbackQuery(chatId, data, messageId);
                 }
             }
             catch (Exception ex)
@@ -159,12 +171,7 @@ namespace GoProTimelapse
                     await _bot.SendMessage(chatId, "не");
                     return;
                 }
-                // var Tasks = await _db.Tasks
-                //     .Where(t => t.ScheduledAt == scheduledTime)
-                //     .ToListAsync();
-                //вот тут крутая проверка на то, есть ли задачи с тем же временем
-                //завтра напишу
-                
+
                 bool exist = await _db.Tasks
                     .AnyAsync(t => t.ScheduledAt == scheduledTime);
                 if (exist)
@@ -182,7 +189,7 @@ namespace GoProTimelapse
                 }
                 if (data[0] == 'T')
                 {
-                    await CreateTask(TaskType.Timelapse, TimeSpan.FromMinutes(5).ToString(), chatId, null, scheduledTime);
+                    await CreateTask(TaskType.Timelapse, TimeSpan.FromMinutes(30).ToString(), chatId, null, scheduledTime);
                     Log.Debug("Таймлапс запланирован на {ScheduledTime}", scheduledTime);
                     await _bot.SendMessage(chatId, "таймлапс запланирован (*￣▽￣)b");
                     await _bot.DeleteMessage(chatId, messageId);

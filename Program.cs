@@ -64,8 +64,6 @@ namespace GoProTimelapse
                 Log.Information("Останавливаем приложение...");
                 cts.Cancel();
 
-                //await Task.WhenAll(botTask, workerTask);
-
                 Log.Information("Все задачи завершены. Выход.");
             }
             catch (Exception ex)

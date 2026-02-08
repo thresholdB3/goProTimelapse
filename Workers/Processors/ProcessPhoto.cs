@@ -26,16 +26,12 @@ namespace GoProTimelapse
 
             await Task.Delay(delay);
 
-            await new TakePhoto().Execute();
+            await _camera.TakePhoto();
 
             await Task.Delay(5000);
 
             var media = await _camera.DownloadLastMedia(".jpg");
-            //await Storage.SaveFile(media, ".jpg");
-
             Stream stream = new MemoryStream(media);
-
-            //var stream = await Storage.GetFile(@"GoProPhotos\1.jpg");
 
             await new SendMedia().Execute(new SendMediaArgs(myArgs.Task.ChatId, "ogo", MediaType.Photo, stream));
         }

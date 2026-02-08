@@ -28,9 +28,9 @@ namespace GoProTimelapse
     }
     public enum CameraStatus
     {
-        Timelapse,
+        Video,
         Photo,
-        Video
+        Timelapse
     }
     
 

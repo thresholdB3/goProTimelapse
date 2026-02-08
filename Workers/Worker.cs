@@ -76,8 +76,8 @@ namespace GoProTimelapse
                         }
                         else
                         {
-                            //await Task.Delay(timelapseDelay);
-                            await Task.Delay(0);//ПОТОМ ПОМЕНЯТЬ АААААААААААА
+                            await Task.Delay(timelapseDelay);
+                            //await Task.Delay(0);
                         }
                         await HandleTimelapse(task);
                     }
@@ -107,25 +107,6 @@ namespace GoProTimelapse
                 Log.Error(ex, "Ошибка при обработке фото");
             }
         }
-
-        //private async Task HandleScheduledPhotoTask(TaskItem task)
-        //{
-        //    Log.Debug("Обработка запланированного фото...");
-        //    try
-        //    {
-        //        await new ProcessPhoto().Execute(new ProcessPhotoArgs(task));
-
-        //        task.Status = TaskStatus.Completed;
-        //        task.FinishedAt = DateTimeOffset.Now;
-        //        await _db.SaveChangesAsync();
-        //        Log.Debug("Запланированное фото обработано!");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Log.Error(ex, "Ошибка при обработке запланированного фото");
-        //    }
-            
-        //}
 
         private async Task HandleTimelapse(TaskItem task)
         {
