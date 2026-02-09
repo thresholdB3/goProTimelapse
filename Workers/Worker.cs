@@ -10,13 +10,11 @@ namespace GoProTimelapse
     {
         private readonly AppDbContext _db;
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, 1);
-        // private readonly Settings _settings;//settings тут вроде вообще не используется, лол
         private static readonly ILogger Log = Serilog.Log.ForContext<Worker>();
 
         public Worker(Settings settings)
         {
             _db = new AppDbContext();
-            // _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
         public static async Task NotifyNewTask()

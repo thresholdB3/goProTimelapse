@@ -33,7 +33,7 @@ namespace GoProTimelapse
             var media = await _camera.DownloadLastMedia(".jpg");
             Stream stream = new MemoryStream(media);
 
-            await new SendMedia().Execute(new SendMediaArgs(myArgs.Task.ChatId, "ogo", MediaType.Photo, stream));
+            await new SendMedia().Execute(new SendMediaArgs(myArgs.Task.ChatId, "( ˘▽˘)っ♨ Фото", MediaType.Photo, stream));
         }
     }
 }

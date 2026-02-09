@@ -96,7 +96,7 @@ namespace GoProTimelapse
 
                     Log.Debug("Обработка сообщения от пользователя {ChatId}", chatId);
 
-                    switch (message.Text) //todo: getLastVideo, написать что нужно ещё доделать в проекте до конца первым делом
+                    switch (message.Text) //todo: getLastVideo
                     {
                         case "/start":
                             await HandleStartCommand(chatId, message);
@@ -159,7 +159,7 @@ namespace GoProTimelapse
                 DraftDates[chatId] = scheduledTime;
 
                 var keyboard = await UpdateInline(data[0]);
-                await _bot.EditMessageText(chatId, messageId, "когда??1", replyMarkup: keyboard);
+                await _bot.EditMessageText(chatId, messageId, "__〆(．．) На какое время запланировать?", replyMarkup: keyboard);
 
                 return;
             }
@@ -168,7 +168,7 @@ namespace GoProTimelapse
                 var scheduledTime = DraftDates[chatId].AddHours(int.Parse(data.Substring(2)));
                 if (scheduledTime <= DateTimeOffset.Now)
                 {
-                    await _bot.SendMessage(chatId, "не");
+                    await _bot.SendMessage(chatId, "(￣ヘ￣) Нельзя запланировать на прошлое");
                     return;
                 }
 
@@ -176,14 +176,14 @@ namespace GoProTimelapse
                     .AnyAsync(t => t.ScheduledAt == scheduledTime);
                 if (exist)
                 {
-                    await _bot.SendMessage(chatId, "камера занята, попробуй другое время (￣ ￣|||)");
+                    await _bot.SendMessage(chatId, "(*_ _)人 Камера занята, попробуй другое время");
                     return;
                 }
                 if (data[0] == 'P')
                 {
                     await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
                     Log.Debug("Фото Запланировано на {ScheduledTime}", scheduledTime);
-                    await _bot.SendMessage(chatId, "фото запланировано (*￣▽￣)b");
+                    await _bot.SendMessage(chatId, "Фото запланировано (*￣▽￣)b");
                     await _bot.DeleteMessage(chatId, messageId);
                     return;
                 }
@@ -191,33 +191,12 @@ namespace GoProTimelapse
                 {
                     await CreateTask(TaskType.Timelapse, TimeSpan.FromMinutes(30).ToString(), chatId, null, scheduledTime);
                     Log.Debug("Таймлапс запланирован на {ScheduledTime}", scheduledTime);
-                    await _bot.SendMessage(chatId, "таймлапс запланирован (*￣▽￣)b");
+                    await _bot.SendMessage(chatId, "Таймлапс запланирован (*￣▽￣)b");
                     await _bot.DeleteMessage(chatId, messageId);
                     return;
                 }
             }
-            // if (data[1] == 'L') //пока отложу, запутанно
-                                    //лучше дальше воркерами займусь
-            // {
-            //     // var scheduledTime = new DateTimeOffset(
-            //     // DateTime.Today.AddDays(data[2] - '0'),
-            //     // TimeSpan.FromHours(5));
-            //     // Log.Debug("Добавляем {s} дней...", data[2]);
 
-            //     InlineKeyboardMarkup? keyboard = await UpdateInline(data[0], Step : data[1]);
-            //     if (keyboard == null)
-            //     {
-            //         return;
-            //     }
-
-            //     await _bot.EditMessageText(chatId, messageId, "сколько??2", replyMarkup: keyboard);
-
-            //     // DraftDates[chatId] = scheduledTime;
-
-            //     // var keyboard = await UpdateInline(data[0]);
-
-            //     return;
-            // }
             if (data[1] == 'S')
             {
                 Log.Debug("Ого: {u}", data[0]);
@@ -226,7 +205,7 @@ namespace GoProTimelapse
                 {
                     return;
                 }
-                await _bot.EditMessageText(chatId, messageId, "когда фото??1", replyMarkup: keyboard);
+                await _bot.EditMessageText(chatId, messageId, "__〆(．．) На какое время запланировать?", replyMarkup: keyboard);
                 return;
             }
 
@@ -243,9 +222,9 @@ namespace GoProTimelapse
             {
                 new[]
                 {
-                    InlineKeyboardButton.WithCallbackData($"{0 + Page}", $"{Type}T{0  + Page}"),
-                    InlineKeyboardButton.WithCallbackData($"{1 + Page}", $"{Type}T{1  + Page}"),
-                    InlineKeyboardButton.WithCallbackData($"{2 + Page}", $"{Type}T{2  + Page}"),
+                    InlineKeyboardButton.WithCallbackData($"{0 + Page}:00", $"{Type}T{0  + Page}"),
+                    InlineKeyboardButton.WithCallbackData($"{1 + Page}:00", $"{Type}T{1  + Page}"),
+                    InlineKeyboardButton.WithCallbackData($"{2 + Page}:00", $"{Type}T{2  + Page}"),
                 },
                 new[]
                 {
@@ -282,13 +261,13 @@ namespace GoProTimelapse
                     await _db.SaveChangesAsync();
 
                     await _bot.SendMessage(chatId,
-                        "👋 Привет! Ты зарегистрирован. Напиши /photo чтобы сделать тестовое фото.");
+                        "＼(⌒▽⌒) Привет! Ты зарегистрирован. Напиши /photo чтобы сделать тестовое фото.");
                     
                     Log.Information("Добавлен пользователь {Username}", username);
                 }
                 else
                 {
-                    await _bot.SendMessage(chatId, "Ты уже зарегистрирован 😉");
+                    await _bot.SendMessage(chatId, "☆(>ᴗ•) Ты уже зарегистрирован");
                 }
             }
             catch (Exception ex)
@@ -303,11 +282,11 @@ namespace GoProTimelapse
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
             if (user == null)
             {
-                await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                await _bot.SendMessage(chatId, "|･д･)ﾉ Сначала напиши /start, чтобы зарегистрироваться.");
                 return;
             }
             var Photo = await Storage.GetLastFile(".jpg");
-            await _bot.SendPhoto(chatId, Photo, caption: "Последнее фото с камеры");
+            await _bot.SendPhoto(chatId, Photo, caption: "(￣▽￣*)ゞ Последнее фото с камеры");
         }
 
         //Обработка команды /photo
@@ -320,20 +299,20 @@ namespace GoProTimelapse
                 var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
                 if (user == null)
                 {
-                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    await _bot.SendMessage(chatId, "|･д･)ﾉ Сначала напиши /start, чтобы зарегистрироваться.");
                     return;
                 }
 
                 if (_camera.isBusy == true)
                 {
-                    await _bot.SendMessage(chatId, "камера занята, попробуй позже (￣ ￣|||)");
+                    await _bot.SendMessage(chatId, "(￣ ￣|||) Камера занята, попробуй позже");
                     return;
                 }
 
                 await CreateTask(TaskType.Photo, null, chatId, user.Id, null);
                 Log.Debug("Создание задачи пользователем {User.Id}...", user.Id);
 
-                await _bot.SendMessage(chatId, "📸 Задача на фото создана. Сейчас обработаю!");
+                await _bot.SendMessage(chatId, "(*￣▽￣)b Задача на фото создана. Сейчас обработаю!");
 
             }
             catch (Exception ex)
@@ -351,7 +330,7 @@ namespace GoProTimelapse
                 var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
                 if (user == null)
                 {
-                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    await _bot.SendMessage(chatId, "|･д･)ﾉ Сначала напиши /start, чтобы зарегистрироваться.");
                     return;
                 }
 
@@ -359,13 +338,13 @@ namespace GoProTimelapse
                 {
                     new[]
                     {
-                        InlineKeyboardButton.WithCallbackData("сегодня", "PD0"),
-                        InlineKeyboardButton.WithCallbackData("завтра", "PD1"),
-                        InlineKeyboardButton.WithCallbackData("послезавтра", "PD2"),
+                        InlineKeyboardButton.WithCallbackData("Сегодня", "PD0"),
+                        InlineKeyboardButton.WithCallbackData("Завтра", "PD1"),
+                        InlineKeyboardButton.WithCallbackData("Послезавтра", "PD2"),
                     },
                 });
 
-                var msg = await _bot.SendMessage(chatId, "когда фото??", replyMarkup: keyboard);
+                var msg = await _bot.SendMessage(chatId, "__〆(．．) На какой день запланировать?", replyMarkup: keyboard);
             }
             catch (Exception ex)
             {
@@ -382,7 +361,7 @@ namespace GoProTimelapse
                 var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
                 if (user == null)
                 {
-                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    await _bot.SendMessage(chatId, "|･д･)ﾉ Сначала напиши /start, чтобы зарегистрироваться.");
                     return;
                 }
 
@@ -396,24 +375,13 @@ namespace GoProTimelapse
                     },
                 });
 
-                var msg = await _bot.SendMessage(chatId, "когда таймлапс??", replyMarkup: keyboard);
+                var msg = await _bot.SendMessage(chatId, "__〆(．．) На какой день запланировать?", replyMarkup: keyboard);
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Ошибка при обработке /scheduledtimelapse");
             }
         }
-
-        //Отправка видео
-        // public async Task SendVideo(string videoName, string botToken, int chatID)
-        // {
-        //     using var cts = new CancellationTokenSource();
-        //     var bot = new TelegramBotClient(botToken, cancellationToken: cts.Token);
-
-        //     await using Stream stream = File.OpenRead($"./{videoName}");
-        //     await bot.SendVideo(chatID, stream);
-        // }
-
         private async Task Subscribe(int chatId, Message message)
         {
             try
@@ -423,19 +391,19 @@ namespace GoProTimelapse
                 var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
                 if (user == null)
                 {
-                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    await _bot.SendMessage(chatId, "|･д･)ﾉ Сначала напиши /start, чтобы зарегистрироваться.");
                     return;
                 }
 
                 if (user.SunsetSubscribtion)
                 {
-                    await _bot.SendMessage(chatId, "Ты уже подписан:)");
+                    await _bot.SendMessage(chatId, "(/ =ω=)/ Ты уже подписан");
                     return;
                 }
 
                 user.SunsetSubscribtion = true;
                 await _db.SaveChangesAsync();
-                await _bot.SendMessage(chatId, "Подписка на таймлапс оформлена!");
+                await _bot.SendMessage(chatId, "(〜￣▽￣)〜 Подписка на таймлапс оформлена");
 
                 Log.Debug("Пользователь {Username} подписался", username);
             }
@@ -454,19 +422,19 @@ namespace GoProTimelapse
                 var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
                 if (user == null)
                 {
-                    await _bot.SendMessage(chatId, "⚠️ Сначала напиши /start, чтобы зарегистрироваться.");
+                    await _bot.SendMessage(chatId, "|･д･)ﾉ Сначала напиши /start, чтобы зарегистрироваться.");
                     return;
                 }
 
                 if (!user.SunsetSubscribtion)
                 {
-                    await _bot.SendMessage(chatId, "Ты не подписан на таймлапс");
+                    await _bot.SendMessage(chatId, "o(TヘTo) Ты не подписан на таймлапс");
                     return;
                 }
 
                 user.SunsetSubscribtion = false;
                 await _db.SaveChangesAsync();
-                await _bot.SendMessage(chatId, "Подписка на таймлапс отменена:(");
+                await _bot.SendMessage(chatId, "( ╥ω╥ ) Подписка на таймлапс отменена");
 
                 Log.Debug("Пользователь {Username} отписался", username);
             }

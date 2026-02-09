@@ -34,7 +34,7 @@ namespace GoProTimelapse
 
             foreach (var userId in myArgs.Users)
             {
-                await new SendMedia().Execute(new SendMediaArgs(userId, "ogo", MediaType.Video, stream));
+                await new SendMedia().Execute(new SendMediaArgs(userId, "( ˘▽˘)っ♨ Таймлапс", MediaType.Video, stream));
             }
         }
 
