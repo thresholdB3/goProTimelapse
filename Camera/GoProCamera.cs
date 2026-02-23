@@ -37,7 +37,7 @@ namespace GoProTimelapse
         {
             Log.Debug("переключение режима на {mode}...", mode);
 
-            string url = $"{_settings.GoPro.Urls.BaseUrl}/gp/gpControl/command/mode?p={(int)mode}";
+            string url = $"{_settings.GoPro.Commands.SetMode}{(int)mode}";
             await _httpClient.GetAsync(url);
 
             await Task.Delay(3000); //3 секунды на переключение режима
@@ -47,9 +47,7 @@ namespace GoProTimelapse
             Log.Debug("фото происходит...");
             await SetMode(CameraStatus.Photo);
 
-            string url = _settings.GoPro.Urls.BaseUrl + "/gp/gpControl/command/shutter?p=1";
-            Log.Debug("фото происходит по ссылке {ogo}", url);
-            await _httpClient.GetAsync(url);
+            await _httpClient.GetAsync(_settings.GoPro.Commands.Trigger);
 
             await Task.Delay(5000); //5 секунд на фото и сохранение
         }
@@ -83,6 +81,9 @@ namespace GoProTimelapse
             var fileUrl = $"{mediaUrl}/{lastFile}";
             var media = await _httpClient.GetByteArrayAsync(fileUrl);
             await Storage.SaveFile(media, Type);
+
+            string url = $"{_settings.GoPro.Commands.Delete}{lastFile}";
+            await _httpClient.GetAsync(url);
 
             return media;
         }

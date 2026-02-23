@@ -12,17 +12,16 @@ namespace GoProTimelapse
     public class SunsetPlanner
     {
         private readonly AppDbContext _db;
-        //потом вынести в appsettings
+        private static readonly ILogger Log = Serilog.Log.ForContext<SunsetPlanner>();
         private readonly double latitude;
         private readonly double longitude;
-        private static readonly ILogger Log = Serilog.Log.ForContext<SunsetPlanner>();
 
         public SunsetPlanner()
         {
             _db = new AppDbContext();
             latitude = 56.8386;   //широта
             longitude = 60.6055;  //долгота
-            //todo: вынести в appsettings широту долготу👍👍👍👍👍👍👍👍ы
+            //todo: вынести в appsettings широту долготу
         }
         public async Task StartAsync(CancellationToken token)
         {

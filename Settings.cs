@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Serilog.Configuration;
 using System.IO;
 
 namespace GoProTimelapse
@@ -7,9 +8,9 @@ namespace GoProTimelapse
     {
         public NetworkSettings Network { get; set; }
         public GoProSettings GoPro { get; set; }
-        public TimelapsSettings Timelaps { get; set; } //??
         public BaseSettings Base { get; set; }
         public TelegramSettings Telegramm { get; set; }
+        public LoggerSettings Logger { get; set; }
 
         //метод для загрузки настроек из JSON
         public static Settings ReadSettings()
@@ -26,6 +27,14 @@ namespace GoProTimelapse
         }
 
     }
+
+    public class LoggerSettings
+    {
+        public string outputTemplateConsole { get; set; }
+        public string outputTemplateFile { get; set; }
+        public string logPath { get; set; }
+    }
+
     public class TelegramSettings
     {
         public string botToken { get; set; }
@@ -48,7 +57,6 @@ namespace GoProTimelapse
 
     public class GoProUrls
     {
-        public string BaseUrl { get; set; }
         public string MediaUrl { get; set; }
         public string FolderUrl { get; set; }
         public string MediaHtml { get; set; }
@@ -59,11 +67,7 @@ namespace GoProTimelapse
         public string SetMode { get; set; }
         public string Trigger { get; set; }
         public string Stop { get; set; }
-    }
-
-    public class TimelapsSettings
-    {
-        public int PhotoDelaySeconds { get; set; }
+        public string Delete { get; set; }
     }
 
     public class BaseSettings

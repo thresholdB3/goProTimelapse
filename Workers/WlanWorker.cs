@@ -1,11 +1,14 @@
 using System.Diagnostics;
 using System.IO;
+using Serilog;
+using Serilog.Events;
 
 namespace GoProTimelapse
 {
     public class WlanWorker
     {
         private readonly NetworkSettings _settings;
+        private static readonly ILogger Log = Serilog.Log.ForContext<WlanWorker>();
 
         public WlanWorker(NetworkSettings settings)
         {
@@ -22,6 +25,7 @@ namespace GoProTimelapse
             ExecuteNetshCommand($"wlan connect name=\"{ssid}\" ssid=\"{ssid}\"");
 
             File.Delete(tempPath);
+            Log.Debug("подключение к камере произошло");
         }
 
         private string GenerateXml(string ssid, string password) => $@"<?xml version=""1.0""?>

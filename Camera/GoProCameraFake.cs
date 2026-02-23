@@ -17,8 +17,6 @@ namespace GoProTimelapse
         public bool isBusy { get; set; }
         private static readonly ILogger Log = Serilog.Log.ForContext<GoProCameraFake>();
     
-
-        //todo: 
         private GoProCameraFake()
         {
 
@@ -52,7 +50,7 @@ namespace GoProTimelapse
             if (Type == "jpg")
             {
                 placeholder = File.ReadAllBytes(@"GoProPhotos\1.jpg");
-                await Storage.SaveFile(placeholder, ".jpg"); //todo: сделать константы для расширений
+                await Storage.SaveFile(placeholder, ".jpg");
             }
             else
             {
