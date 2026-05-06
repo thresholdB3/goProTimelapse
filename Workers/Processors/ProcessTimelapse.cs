@@ -21,24 +21,33 @@ namespace GoProTimelapse
     {
         public override async Task Execute(ProcessorArgs? args = null)
         {
-            var myArgs = args as ProcessTimelapseArgs;
-            var timelapseDelay = TimeSpan.Parse(myArgs.TimelapseDelay);
-
-            Log.Debug("Время съёмки в милисекундах: {TimelapseDelay}", timelapseDelay);
-
-            await _camera.MakeTimelapse(timelapseDelay);
-            await Task.Delay(5000);
-
-            var media = await _camera.DownloadLastMedia(".mp4");
-            Stream stream = new MemoryStream(media);
-
-            foreach (var userId in myArgs.Users)
+            try
             {
-                await new SendMedia().Execute(new SendMediaArgs(userId, "( ˘▽˘)っ♨ Таймлапс", MediaType.Video, stream));
+                Log.Information("Происходит обработка таймлапса...");
+                var myArgs = args as ProcessTimelapseArgs;
+                var timelapseDelay = TimeSpan.Parse(myArgs.TimelapseDelay);
+
+                Log.Debug("Время съёмки в милисекундах: {TimelapseDelay}", timelapseDelay);
+
+                await _camera.MakeTimelapse(timelapseDelay);
+                await Task.Delay(5000);
+
+                var media = await _camera.DownloadLastMedia(".mp4");
+                var media1 = await FFMpegWorker.CompressAsync(media);
+                Stream stream = new MemoryStream(media1);
+
+                foreach (var userId in myArgs.Users)
+                {
+                    await new SendMedia().Execute(new SendMediaArgs(userId, "( ˘▽˘)っ♨ Таймлапс", MediaType.Video, stream));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Произошла ошибка при обработке таймлапса :(");
             }
         }
 
-        
-        
+
+
     }
 }

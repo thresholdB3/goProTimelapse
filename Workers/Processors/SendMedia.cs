@@ -26,10 +26,16 @@ namespace GoProTimelapse
     {
         public override async Task Execute(ProcessorArgs? args = null)
         {
-            var smArgs = args as SendMediaArgs;
-            Log.Debug("Отправка фото пользователю {userId}", smArgs.User);
-            await Telegramm.SendMedia(smArgs.User, smArgs.Media, smArgs.Message, smArgs.Type);
-            Log.Debug("Медиа отправлено");
+            try
+            {
+                var smArgs = args as SendMediaArgs;
+                Log.Information("Отправка фото пользователю {userId}", smArgs.User);
+                await Telegramm.SendMedia(smArgs.User, smArgs.Media, smArgs.Message, smArgs.Type);
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "Произошла ошибка при отправке медиа :(");
+            }
         }
     }
 }

@@ -24,25 +24,32 @@ namespace GoProTimelapse
         private readonly AppDbContext _db;
         private static readonly ILogger Log = Serilog.Log.ForContext<Telegramm>();
         static readonly ConcurrentDictionary<long, DateTimeOffset> DraftDates = new(); //для начала так, потом переделаю
-        private readonly GoProCameraFake _camera;
-        
+        private readonly GoProCamera _camera;
 
 
+
+        //private Telegramm(string botToken)
+        //{
+        //    var handler = new HttpClientHandler();
+        //    var httpClient = new HttpClient(handler)
+        //    {
+        //        Timeout = TimeSpan.FromMinutes(30)
+        //    };
+        //    var options = new TelegramBotClientOptions(
+        //        token: botToken
+        //       // baseUrl: "http://127.0.0.1:8081"
+        //    );
+        //    _bot = new TelegramBotClient(options, httpClient);
+        //    _db = new AppDbContext();
+        //    _camera = GoProCameraFake.CreateSingleton();
+        //}
         private Telegramm(string botToken)
         {
-            var handler = new HttpClientHandler();
-            var httpClient = new HttpClient(handler)
-            {
-                Timeout = TimeSpan.FromMinutes(30)
-            };
-            var options = new TelegramBotClientOptions(
-                token: botToken,
-                baseUrl: "http://127.0.0.1:8081"
-            );
-            _bot = new TelegramBotClient(options, httpClient);
+            _bot = new TelegramBotClient(botToken);
             _db = new AppDbContext();
-            _camera = GoProCameraFake.CreateSingleton();
+            _camera = GoProCamera.CreateSingleton();
         }
+
         private static Telegramm _singlet;
         public static Telegramm CreateSingleton(string token)
         {
@@ -53,9 +60,9 @@ namespace GoProTimelapse
             }
             return _singlet;
         }
-        public static async Task SendMedia(long? chatId, Stream stream, string text, MediaType type) 
+        public static async Task SendMedia(long? chatId, Stream stream, string text, MediaType type)
         {
-            Log.Debug("Отправка фото пользователю {ChatId}...", chatId);
+            Log.Information("Отправка фото пользователю {ChatId}...", chatId);
 
             if (type == MediaType.Photo)
             {
@@ -65,7 +72,6 @@ namespace GoProTimelapse
             {
                 await _singlet._bot.SendVideo(chatId, stream, caption: text);
             }
-            Log.Debug("Фото отправлено!");
         }
 
         //Запуск слушателя
@@ -106,11 +112,11 @@ namespace GoProTimelapse
                             await HandlePhotoCommand(chatId, message);
                             break;
 
-                        case "/scheduledphoto":
+                        case "/schedulephoto":
                             await CreateScheduledPhotoCommand(message, chatId);
                             break;
                         
-                        case "/scheduledtimelapse":
+                        case "/scheduletimelapse":
                             await CreateScheduledTimelapseCommand(message, chatId);
                             break;
 
@@ -145,68 +151,73 @@ namespace GoProTimelapse
         }
 
         private async Task HandleCallbackQuery(long chatId, string data, int messageId)//большая штука, надо поделить на несколько
-                                                                                        //а может и не надо
-                                                                                        //подумать надо
+                                                                                       //а может и не надо
+                                                                                       //подумать надо
         {
-            Log.Debug("Обработка апдейта...");
-            if (data[1] == 'D')
+            try
             {
-                var scheduledTime = new DateTimeOffset(
-                DateTime.Today.AddDays(data[2] - '0'),
-                TimeSpan.FromHours(5));
-                Log.Debug("Добавляем {s} дней...", data[2]);
+                Log.Information("Обработка апдейта...");
+                if (data[1] == 'D')
+                {
+                    var scheduledTime = new DateTimeOffset(
+                    DateTime.Today.AddDays(data[2] - '0'),
+                    TimeSpan.FromHours(5));
 
-                DraftDates[chatId] = scheduledTime;
+                    DraftDates[chatId] = scheduledTime;
 
-                var keyboard = await UpdateInline(data[0]);
-                await _bot.EditMessageText(chatId, messageId, "__〆(．．) На какое время запланировать?", replyMarkup: keyboard);
+                    var keyboard = await UpdateInline(data[0]);
+                    await _bot.EditMessageText(chatId, messageId, "__〆(．．) На какое время запланировать?", replyMarkup: keyboard);
 
-                return;
+                    return;
+                }
+                if (data[1] == 'T')
+                {
+                    var scheduledTime = DraftDates[chatId].AddHours(int.Parse(data.Substring(2)));
+                    if (scheduledTime <= DateTimeOffset.Now)
+                    {
+                        await _bot.SendMessage(chatId, "(￣ヘ￣) Нельзя запланировать на прошлое");
+                        return;
+                    }
+
+                    bool exist = await _db.Tasks
+                        .AnyAsync(t => t.ScheduledAt == scheduledTime);
+                    if (exist)
+                    {
+                        await _bot.SendMessage(chatId, "(*_ _)人 Камера занята, попробуй другое время");
+                        return;
+                    }
+                    if (data[0] == 'P')
+                    {
+                        await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
+                        Log.Information("Фото Запланировано на {ScheduledTime}", scheduledTime);
+                        await _bot.SendMessage(chatId, "Фото запланировано (*￣▽￣)b");
+                        await _bot.DeleteMessage(chatId, messageId);
+                        return;
+                    }
+                    if (data[0] == 'T')
+                    {
+                        await CreateTask(TaskType.Timelapse, TimeSpan.FromMinutes(30).ToString(), chatId, null, scheduledTime);
+                        Log.Information("Таймлапс запланирован на {ScheduledTime}", scheduledTime);
+                        await _bot.SendMessage(chatId, "Таймлапс запланирован (*￣▽￣)b");
+                        await _bot.DeleteMessage(chatId, messageId);
+                        return;
+                    }
+                }
+
+                if (data[1] == 'S')
+                {
+                    InlineKeyboardMarkup? keyboard = await UpdateInline(data[0], Step: data[1], Page: int.Parse(data.Substring(2)));
+                    if (keyboard == null)
+                    {
+                        return;
+                    }
+                    await _bot.EditMessageText(chatId, messageId, "__〆(．．) На какое время запланировать?", replyMarkup: keyboard);
+                    return;
+                }
             }
-            if (data[1] == 'T')
+            catch (Exception ex)
             {
-                var scheduledTime = DraftDates[chatId].AddHours(int.Parse(data.Substring(2)));
-                if (scheduledTime <= DateTimeOffset.Now)
-                {
-                    await _bot.SendMessage(chatId, "(￣ヘ￣) Нельзя запланировать на прошлое");
-                    return;
-                }
-
-                bool exist = await _db.Tasks
-                    .AnyAsync(t => t.ScheduledAt == scheduledTime);
-                if (exist)
-                {
-                    await _bot.SendMessage(chatId, "(*_ _)人 Камера занята, попробуй другое время");
-                    return;
-                }
-                if (data[0] == 'P')
-                {
-                    await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
-                    Log.Debug("Фото Запланировано на {ScheduledTime}", scheduledTime);
-                    await _bot.SendMessage(chatId, "Фото запланировано (*￣▽￣)b");
-                    await _bot.DeleteMessage(chatId, messageId);
-                    return;
-                }
-                if (data[0] == 'T')
-                {
-                    await CreateTask(TaskType.Timelapse, TimeSpan.FromMinutes(30).ToString(), chatId, null, scheduledTime);
-                    Log.Debug("Таймлапс запланирован на {ScheduledTime}", scheduledTime);
-                    await _bot.SendMessage(chatId, "Таймлапс запланирован (*￣▽￣)b");
-                    await _bot.DeleteMessage(chatId, messageId);
-                    return;
-                }
-            }
-
-            if (data[1] == 'S')
-            {
-                Log.Debug("Ого: {u}", data[0]);
-                InlineKeyboardMarkup? keyboard = await UpdateInline(data[0], Step : data[1], Page : int.Parse(data.Substring(2)));
-                if (keyboard == null)
-                {
-                    return;
-                }
-                await _bot.EditMessageText(chatId, messageId, "__〆(．．) На какое время запланировать?", replyMarkup: keyboard);
-                return;
+                Log.Error(ex, "Ошибка при обработке апдейта :(");
             }
 
         }
@@ -232,8 +243,6 @@ namespace GoProTimelapse
                     InlineKeyboardButton.WithCallbackData("->", $"{Type}S{Page + 3}"),
                 },
             });
-            Log.Debug("Страница {s}, кнопки {d} и {g}", Page, Page - 3, Page + 3);
-            Log.Debug($"{Type}{Step}{Page - 3}");
             return keyboard;
         }
 
@@ -277,16 +286,23 @@ namespace GoProTimelapse
         }
         private async Task GetLastPhoto(int chatId, Message message)
         {
-            Log.Debug("Обработка /lastphoto");
-            var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
-            if (user == null)
+            try
             {
-                await _bot.SendMessage(chatId, "|･д･)ﾉ Сначала напиши /start, чтобы зарегистрироваться.");
-                return;
+                Log.Debug("Обработка /lastphoto");
+                var username = message.Chat.Username ?? $"user_{message.Chat.Id}";
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+                if (user == null)
+                {
+                    await _bot.SendMessage(chatId, "|･д･)ﾉ Сначала напиши /start, чтобы зарегистрироваться.");
+                    return;
+                }
+                var Photo = await Storage.GetLastFile(".jpg");
+                await _bot.SendPhoto(chatId, Photo, caption: "(￣▽￣*)ゞ Последнее фото с камеры");
             }
-            var Photo = await Storage.GetLastFile(".jpg");
-            await _bot.SendPhoto(chatId, Photo, caption: "(￣▽￣*)ゞ Последнее фото с камеры");
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Ошибка при обработке /lastphoto");
+            }
         }
 
         //Обработка команды /photo
@@ -466,7 +482,7 @@ namespace GoProTimelapse
             _db.Tasks.Add(task);
             await _db.SaveChangesAsync();
 
-            Log.Debug("Добавлена задача типа {Type} пользователем {UserId}", type, userId);
+            Log.Information("Добавлена задача типа {Type} пользователем {UserId}", type, userId);
 
             await Worker.NotifyNewTask();
         }

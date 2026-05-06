@@ -20,7 +20,7 @@ namespace GoProTimelapse
         public static async Task NotifyNewTask()
         {
             _semaphore.Release();
-            Log.Debug("Уведомление о новой задаче");
+            Log.Information("Уведомление о новой задаче");
         }
 
         public async Task StartAsync(CancellationToken token)
@@ -35,7 +35,7 @@ namespace GoProTimelapse
 
         private async Task ProcessPendingTasks()
         {
-            Log.Debug("Обработка задачи...");
+            Log.Information("Обработка задачи...");
             try
             {
                 var newTasks = await _db.Tasks
@@ -56,7 +56,7 @@ namespace GoProTimelapse
                             {
                                 var photoDelay = task.ScheduledAt.Value - DateTimeOffset.Now;
                                 await Task.Delay(photoDelay);
-                                Log.Debug("Фото отложено на {PhotoDelay} милисекунд", photoDelay);
+                                Log.Information("Фото отложено на {PhotoDelay} милисекунд", photoDelay);
                                 await HandlePhotoTask(task);
                             });
                         }
@@ -64,12 +64,13 @@ namespace GoProTimelapse
                         {
                             await HandlePhotoTask(task);
                         }
-                    }else if (task.Type == TaskType.Timelapse)
+                    }
+                    else if (task.Type == TaskType.Timelapse)
                     {
                         _ = Task.Run(async () =>
                         {
                             var timelapseDelay = task.ScheduledAt.Value - DateTimeOffset.Now;
-                            Log.Debug("Таймлапс отложен на {TimelapseDelay} милисекунд", timelapseDelay);
+                            Log.Information("Таймлапс отложен на {TimelapseDelay} милисекунд", timelapseDelay);
                             await Task.Delay(timelapseDelay);
                             await HandleTimelapse(task);
                         });
@@ -124,7 +125,7 @@ namespace GoProTimelapse
                 task.Status = TaskStatus.Completed;
                 task.FinishedAt = DateTimeOffset.Now;
                 await _db.SaveChangesAsync();
-                Log.Debug("Таймлапс обработан :)");
+                Log.Information("Таймлапс обработан :)");
             }
             catch (Exception ex)
             {

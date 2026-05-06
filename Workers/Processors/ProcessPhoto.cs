@@ -21,19 +21,27 @@ namespace GoProTimelapse
     {
         public override async Task Execute(ProcessorArgs? args)
         {
-            var myArgs = args as ProcessPhotoArgs;
-            int delay = Convert.ToInt32(myArgs.Task.Parameters);
+            try
+            {
+                Log.Information("Происходит обработка фото...");
+                var myArgs = args as ProcessPhotoArgs;
+                int delay = Convert.ToInt32(myArgs.Task.Parameters);
 
-            await Task.Delay(delay);
+                await Task.Delay(delay);
 
-            await _camera.TakePhoto();
+                await _camera.TakePhoto();
 
-            await Task.Delay(5000);
+                await Task.Delay(5000);
 
-            var media = await _camera.DownloadLastMedia(".jpg");
-            Stream stream = new MemoryStream(media);
+                var media = await _camera.DownloadLastMedia(".jpg");
+                Stream stream = new MemoryStream(media);
 
-            await new SendMedia().Execute(new SendMediaArgs(myArgs.Task.ChatId, "( ˘▽˘)っ♨ Фото", MediaType.Photo, stream));
+                await new SendMedia().Execute(new SendMediaArgs(myArgs.Task.ChatId, "( ˘▽˘)っ♨ Фото", MediaType.Photo, stream));
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Произошла ошибка при обработке фото:(");
+            }
         }
     }
 }

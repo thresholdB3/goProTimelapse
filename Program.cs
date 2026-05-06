@@ -46,8 +46,8 @@ namespace GoProTimelapse
                 var worker = new Worker(settings);
                 var sunsetPlanner = new SunsetPlanner();
 
-                var wlanWorker = new WlanWorker(settings.Network);
-                wlanWorker.Connect(settings.GoPro.CameraSSID, settings.GoPro.CameraPassword);
+                //var wlanWorker = new WlanWorker(settings.Network);
+                //wlanWorker.Connect(settings.GoPro.CameraSSID, settings.GoPro.CameraPassword);
 
                 await Task.Delay(5000);
 

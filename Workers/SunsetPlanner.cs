@@ -34,7 +34,7 @@ namespace GoProTimelapse
         }
         public async Task GetSunsetTime()
         {
-            Log.Debug("Получение времени заката...");
+            Log.Information("Получение времени заката...");
             try
             {
                 string apiUrl = $"https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&formatted=0&tzid=Asia/Yekaterinburg";
@@ -64,18 +64,19 @@ namespace GoProTimelapse
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Ошибка в планировщике закатов");
+                Log.Error(ex, "Ошибка в планировщике закатов :(");
             }
 
         }
 
         public async Task ScheduleTimelapse(DateTimeOffset sunsetTime, DateTimeOffset sunsetTime2)
+        //todo: эта функци будет вызывать getsunsettime три раза, планировать таймлапсы и та проверка короче будет здесь а не там
         {
             try
             {
-                Log.Debug("Создание задачи...");
+                Log.Information("Создание задачи...");
                 var timelapseTime = (sunsetTime2 - sunsetTime);
-                Log.Debug("Время таймлапса в миллисекундах: {timelapseTime}", timelapseTime);
+                Log.Debug("Время таймлапса: {timelapseTime}", timelapseTime);
 
                 var task = new TaskItem
                 {
@@ -85,16 +86,16 @@ namespace GoProTimelapse
                     ScheduledAt = sunsetTime,
                     Parameters = timelapseTime.ToString()
                 };
-               
+
                 _db.Tasks.Add(task);
                 await _db.SaveChangesAsync();
                 await Worker.NotifyNewTask();
 
-                Log.Debug("Задача создана!");
+                Log.Information("Задача создана!");
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Ошибка в планировщике закатов");
+                Log.Error(ex, "Ошибка в планировщике закатов :(");
             }
         }
     }

@@ -14,7 +14,7 @@ namespace GoProTimelapse
         private readonly Settings _settings;
         private readonly HttpClient _httpClient;
         public bool isBusy { get; set; }
-        private static readonly ILogger Log = Serilog.Log.ForContext<GoProCameraFake>();
+        private static readonly ILogger Log = Serilog.Log.ForContext<GoProCamera>();
 
         private static GoProCamera _singlet;
         private GoProCamera(Settings settings)
@@ -28,14 +28,14 @@ namespace GoProTimelapse
             {
                 var settings = Settings.ReadSettings();
                 _singlet = new GoProCamera(settings);
-                Log.Debug("Камера создана <(-*-)>");
+                Log.Information("Камера создана <(-*-)>");
             }
             return _singlet;
         }
 
         private async Task SetMode(CameraStatus mode)
         {
-            Log.Debug("переключение режима на {mode}...", mode);
+            Log.Information("переключение режима на {mode}...", mode);
 
             string url = $"{_settings.GoPro.Commands.SetMode}{(int)mode}";
             await _httpClient.GetAsync(url);
@@ -53,39 +53,49 @@ namespace GoProTimelapse
         }
         public async Task<byte[]> DownloadLastMedia(string Type)
         {
-            string folderUrl = _settings.GoPro.Urls.FolderUrl;
-            string mediaUrl = _settings.GoPro.Urls.MediaUrl;
-            string mediaHtml = _settings.GoPro.Urls.MediaHtml;
-            string downloadFolder = _settings.Base.DownloadFolder;
-
-            if (!Directory.Exists(downloadFolder))
-                Directory.CreateDirectory(downloadFolder);
-
-            var folderHtml = await _httpClient.GetStringAsync(folderUrl);
-            MatchCollection fileMatches;//ищет файлы типа GOPR1234.JPG
-
-            if (Type == ".jpg")
+            try
             {
-                fileMatches = Regex.Matches(folderHtml, mediaHtml + @"([^""]+\.JPG)""");
+                Log.Information("Загрузка медиа...");
+
+                string folderUrl = _settings.GoPro.Urls.FolderUrl;
+                string mediaUrl = _settings.GoPro.Urls.MediaUrl;
+                string mediaHtml = _settings.GoPro.Urls.MediaHtml;
+                string downloadFolder = _settings.Base.DownloadFolder;
+
+                if (!Directory.Exists(downloadFolder))
+                    Directory.CreateDirectory(downloadFolder);
+
+                var folderHtml = await _httpClient.GetStringAsync(folderUrl);
+                MatchCollection fileMatches;//ищет файлы типа GOPR1234.JPG
+
+                if (Type == ".jpg")
+                {
+                    fileMatches = Regex.Matches(folderHtml, mediaHtml + @"([^""]+\.JPG)""");
+                }
+                else
+                {
+                    fileMatches = Regex.Matches(folderHtml, mediaHtml + @"([^""]+\.MP4)""");
+                }
+
+                var lastFile = fileMatches //поиск последнего
+                    .Select(m => $"100GOPRO/{m.Groups[1].Value}")
+                    .OrderBy(name => name)
+                    .Last();
+
+                var fileUrl = $"{mediaUrl}/{lastFile}";
+                var media = await _httpClient.GetByteArrayAsync(fileUrl);
+                await Storage.SaveFile(media, Type);
+
+                string url = $"{_settings.GoPro.Commands.Delete}{lastFile}";
+                await _httpClient.GetAsync(url);
+
+                return media;
             }
-            else
+            catch (Exception ex)
             {
-                fileMatches = Regex.Matches(folderHtml, mediaHtml + @"([^""]+\.MP4)""");
+                Log.Error(ex, "Произошла ошибка при загрузке медиа :(");
+                return null;
             }
-
-            var lastFile = fileMatches //поиск последнего
-                .Select(m => $"100GOPRO/{m.Groups[1].Value}")
-                .OrderBy(name => name)
-                .Last();
-
-            var fileUrl = $"{mediaUrl}/{lastFile}";
-            var media = await _httpClient.GetByteArrayAsync(fileUrl);
-            await Storage.SaveFile(media, Type);
-
-            string url = $"{_settings.GoPro.Commands.Delete}{lastFile}";
-            await _httpClient.GetAsync(url);
-
-            return media;
         }
         public async Task MakeTimelapse(TimeSpan delay)
         {
