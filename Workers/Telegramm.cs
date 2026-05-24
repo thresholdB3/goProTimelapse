@@ -26,25 +26,13 @@ namespace GoProTimelapse
         static readonly ConcurrentDictionary<long, DateTimeOffset> DraftDates = new(); //для начала так, потом переделаю
         private readonly GoProCamera _camera;
 
-
-
-        //private Telegramm(string botToken)
-        //{
-        //    var handler = new HttpClientHandler();
-        //    var httpClient = new HttpClient(handler)
-        //    {
-        //        Timeout = TimeSpan.FromMinutes(30)
-        //    };
-        //    var options = new TelegramBotClientOptions(
-        //        token: botToken
-        //       // baseUrl: "http://127.0.0.1:8081"
-        //    );
-        //    _bot = new TelegramBotClient(options, httpClient);
-        //    _db = new AppDbContext();
-        //    _camera = GoProCameraFake.CreateSingleton();
-        //}
         private Telegramm(string botToken)
         {
+            var handler = new HttpClientHandler();
+            var httpClient = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromMinutes(30)
+            };
             _bot = new TelegramBotClient(botToken);
             _db = new AppDbContext();
             _camera = GoProCamera.CreateSingleton();
@@ -66,12 +54,16 @@ namespace GoProTimelapse
 
             if (type == MediaType.Photo)
             {
-                await _singlet._bot.SendPhoto(chatId, stream, caption: text);
+                await _singlet._bot.SendPhoto(chatId, stream, caption: text, ParseMode.None);
             }
             else
             {
-                await _singlet._bot.SendVideo(chatId, stream, caption: text);
+                await _singlet._bot.SendVideo(chatId, stream, caption: text, ParseMode.None);
             }
+        }
+        public static async Task SendMessage(long? chatId, string text)
+        {
+            await _singlet._bot.SendMessage(chatId, text);
         }
 
         //Запуск слушателя
@@ -179,8 +171,16 @@ namespace GoProTimelapse
                         return;
                     }
 
-                    bool exist = await _db.Tasks
-                        .AnyAsync(t => t.ScheduledAt == scheduledTime);
+                    var activeTasks = await _db.Tasks
+                        .Where(t => t.Status == TaskStatus.InProgress)
+                        .ToListAsync();
+
+                    bool exist = activeTasks.Any(t =>
+                        (t.ScheduledAt > scheduledTime &&
+                        t.ScheduledAt < scheduledTime.AddHours(1)) ||
+                        (t.ScheduledAt > scheduledTime.AddHours(-1) &&
+                        t.ScheduledAt < scheduledTime));
+
                     if (exist)
                     {
                         await _bot.SendMessage(chatId, "(*_ _)人 Камера занята, попробуй другое время");
@@ -188,7 +188,10 @@ namespace GoProTimelapse
                     }
                     if (data[0] == 'P')
                     {
-                        await CreateTask(TaskType.Photo, null, chatId, null, scheduledTime);
+                        //поиск пользователя
+                        var user = await _db.Users.FirstOrDefaultAsync(u => u.TGUserId == chatId);
+
+                        await CreateTask(TaskType.Photo, null, chatId, user.Id, scheduledTime);
                         Log.Information("Фото Запланировано на {ScheduledTime}", scheduledTime);
                         await _bot.SendMessage(chatId, "Фото запланировано (*￣▽￣)b");
                         await _bot.DeleteMessage(chatId, messageId);
@@ -196,7 +199,10 @@ namespace GoProTimelapse
                     }
                     if (data[0] == 'T')
                     {
-                        await CreateTask(TaskType.Timelapse, TimeSpan.FromMinutes(30).ToString(), chatId, null, scheduledTime);
+                        //поиск пользователя
+                        var user = await _db.Users.FirstOrDefaultAsync(u => u.TGUserId == chatId);
+
+                        await CreateTask(TaskType.Timelapse, TimeSpan.FromMinutes(30).ToString(), chatId, user.Id, scheduledTime);
                         Log.Information("Таймлапс запланирован на {ScheduledTime}", scheduledTime);
                         await _bot.SendMessage(chatId, "Таймлапс запланирован (*￣▽￣)b");
                         await _bot.DeleteMessage(chatId, messageId);
@@ -493,7 +499,7 @@ namespace GoProTimelapse
     {
         public static async Task SendMessage(this ITelegramBotClient bot, int chatId, string text)
         {
-            await bot.SendMessage(chatId, text, parseMode: ParseMode.Markdown);
+            await bot.SendMessage(chatId, text, ParseMode.None);
         }
     }
 }

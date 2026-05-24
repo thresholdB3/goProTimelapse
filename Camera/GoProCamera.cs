@@ -21,6 +21,7 @@ namespace GoProTimelapse
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _httpClient = new HttpClient();
+            _httpClient.Timeout = Timeout.InfiniteTimeSpan;
         }
         public static GoProCamera CreateSingleton()
         {

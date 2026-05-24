@@ -41,6 +41,8 @@ namespace GoProTimelapse
             catch (Exception ex)
             {
                 Log.Error(ex, "Произошла ошибка при обработке фото:(");
+                var myArgs = args as ProcessPhotoArgs;
+                Telegramm.SendMessage(myArgs.Task.ChatId, "Произошла ошибка при обработке фото:(");
             }
         }
     }

@@ -30,20 +30,26 @@ namespace GoProTimelapse
                 Log.Debug("Время съёмки в милисекундах: {TimelapseDelay}", timelapseDelay);
 
                 await _camera.MakeTimelapse(timelapseDelay);
-                await Task.Delay(5000);
+                await Task.Delay(2000);
 
                 var media = await _camera.DownloadLastMedia(".mp4");
-                var media1 = await FFMpegWorker.CompressAsync(media);
-                Stream stream = new MemoryStream(media1);
+                var mediaName = await Storage.GetLastFileGuid(".mp4");
+                var mediaPath = $"GoProPhotos\\{mediaName}.mp4";
+                var media1 = await FFMpegWorker.CompressAsync(mediaPath);
 
                 foreach (var userId in myArgs.Users)
                 {
-                    await new SendMedia().Execute(new SendMediaArgs(userId, "( ˘▽˘)っ♨ Таймлапс", MediaType.Video, stream));
+                    await new SendMedia().Execute(new SendMediaArgs(userId, "( ˘▽˘)っ♨ Таймлапс", MediaType.Video, media1));
                 }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Произошла ошибка при обработке таймлапса :(");
+                var myArgs = args as ProcessTimelapseArgs;
+                foreach (var userId in myArgs.Users)
+                {
+                    Telegramm.SendMessage(userId, "Произошла ошибка при обработке таймлапса:(");
+                }
             }
         }
 

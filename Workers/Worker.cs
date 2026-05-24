@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
-using Telegram.Bot;
 using Serilog;
 using Serilog.Events;
+using System.Text.Json;
+using Telegram.Bot;
+using Telegram.Bot.Types;
 
 namespace GoProTimelapse
 {
@@ -107,17 +108,24 @@ namespace GoProTimelapse
             Log.Debug("Обработка таймлапса...");
             try
             {
-                var subscribedUsers = await _db.Users
-                    .Where(u => u.SunsetSubscribtion == true)
-                    .ToListAsync();
-                Log.Debug("Пользователи с подпиской найдены");
-
                 List<long> userIdList = new List<long>();
-
-                foreach (var user in subscribedUsers)
+                if (task.UserId == null)
                 {
+                    var subscribedUsers = await _db.Users
+                        .Where(u => u.SunsetSubscribtion == true)
+                        .ToListAsync();
+                    Log.Debug("Пользователи с подпиской найдены");
+
+                    foreach (var user in subscribedUsers)
+                    {
+                        userIdList.Add(user.TGUserId);
+                        Log.Debug("Добавлен пользователь {user.Username}", user.Username);
+                    }
+                }
+                else
+                {
+                    var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == task.UserId);
                     userIdList.Add(user.TGUserId);
-                    Log.Debug("Добавлен пользователь {user.Username}", user.Username);
                 }
 
                 await new ProcessTimelapse().Execute(new ProcessTimelapseArgs(task.Parameters, userIdList));

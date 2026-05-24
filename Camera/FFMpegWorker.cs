@@ -69,64 +69,71 @@ namespace GoProTimelapse
                 Log.Error(ex, "Ошибка при создании видео :(");
             }
         }
-        public static async Task<byte[]> CompressAsync(byte[] inputBytes) //todo: вроде не работает
+        public static async Task<Stream> CompressAsync(string inputPath, CancellationToken cancellationToken = default) //todo: вроде не работает
+            //пусть сюда будет идти щагрущка с диска
         {
             try
             {
                 Log.Information("Начало сжатия видео");
                 string ffmpegPath = Path.Combine(AppContext.BaseDirectory, "ffmpeg.exe");
-                int crf = 26;
+                int crf = 29;
                 int fps = 30;
 
                 var psi = new ProcessStartInfo
                 {
                     FileName = ffmpegPath,
                     Arguments =
-                    $"-i pipe:0 " +
-                    $"-c:v libx264 -preset slow -crf {crf} " +
+                    $"-i \"{inputPath}\" " +
+                    $"-c:v libx264 -preset veryslow -crf {crf} " +
+                    $"-vf \"scale=1280:-2,setsar=1\" " +
                     $"-r {fps} " +
                     $"-an " +
-                    $"-movflags frag_keyframe+empty_moov " +
+                    $"-movflags frag_keyframe+empty_moov " + 
                     $"-f mp4 pipe:1",
+
                     UseShellExecute = false,
-                    RedirectStandardInput = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true
                 };
 
-                using var process = new Process { StartInfo = psi };
-
-                var errorBuilder = new StringBuilder();
-
-                process.ErrorDataReceived += (_, e) =>
+                using var process = new Process
                 {
-                    if (!string.IsNullOrWhiteSpace(e.Data))
-                        errorBuilder.AppendLine(e.Data);
+                    StartInfo = psi,
+                    EnableRaisingEvents = true
                 };
 
                 process.Start();
-                process.BeginErrorReadLine();
 
-                var writeTask = process.StandardInput.BaseStream.WriteAsync(inputBytes, 0, inputBytes.Length)
-                    .ContinueWith(_ => process.StandardInput.Close());
+                // Читаем stderr параллельно, иначе ffmpeg может зависнуть
+                Task<string> errorTask = process.StandardError.ReadToEndAsync();
 
-                using var output = new MemoryStream();
-                var readTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+                var outputStream = new MemoryStream();
 
-                await Task.WhenAll(writeTask, readTask);
-                await process.WaitForExitAsync();
+                // Читаем stdout параллельно
+                Task copyTask = process.StandardOutput.BaseStream.CopyToAsync(
+                    outputStream,
+                    cancellationToken);
+
+                await Task.WhenAll(copyTask, errorTask);
+
+                await process.WaitForExitAsync(cancellationToken);
+
+                string errors = await errorTask;
 
                 if (process.ExitCode != 0)
-                    throw new Exception("FFmpeg error:\n" + errorBuilder);
+                {
+                    throw new Exception(
+                        $"FFmpeg exited with code {process.ExitCode}\n{errors}");
+                }
 
-                Log.Information("Конец сжатия видео");
-
-                return output.ToArray();
+                outputStream.Position = 0;
+                return outputStream;
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Ошибка при сжатии видео :(");
+                
                 return null; //без этого ошибка
             }
         }

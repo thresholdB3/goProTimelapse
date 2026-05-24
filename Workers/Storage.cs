@@ -71,5 +71,17 @@ namespace GoProTimelapse
             var media = File.OpenRead(@"GoProPhotos\" + lastMedia.FileName + lastMedia.Extenstion);
             return media;
         }
+        public static async Task<Guid> GetLastFileGuid(string extension)
+        {
+            using var _db = new AppDbContext();
+
+            var lastMedia = _db.Media
+                .Where(m => m.Extenstion == extension)
+                .AsEnumerable() //потом может чутка переделаб
+                .OrderByDescending(m => m.SaveTime.UtcDateTime)
+                .FirstOrDefault();
+
+            return lastMedia.FileName;
+        }
     }
 }

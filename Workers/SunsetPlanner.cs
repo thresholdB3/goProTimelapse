@@ -26,18 +26,21 @@ namespace GoProTimelapse
         public async Task StartAsync(CancellationToken token)
         {
             Log.Information("Запуск планировщика закатов...");
+            await GetSunsetTime();
+            await GetSunsetTime(1);
             while (!token.IsCancellationRequested)
             {
-                await GetSunsetTime();
+                await GetSunsetTime(2);
                 await Task.Delay(TimeSpan.FromDays(1));
             }
         }
-        public async Task GetSunsetTime()
+        public async Task GetSunsetTime(int daysAhead = 0)
         {
-            Log.Information("Получение времени заката...");
+            Log.Information("Получение времени заката (смещение в днях: {DaysAhead})...", daysAhead);
             try
             {
-                string apiUrl = $"https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&formatted=0&tzid=Asia/Yekaterinburg";
+                string targetDate = DateTime.Today.AddDays(daysAhead).ToString("yyyy-MM-dd");
+                string apiUrl = $"https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&date={targetDate}&formatted=0&tzid=Asia/Yekaterinburg";
 
                 using (HttpClient client = new HttpClient())
                 {
@@ -70,7 +73,6 @@ namespace GoProTimelapse
         }
 
         public async Task ScheduleTimelapse(DateTimeOffset sunsetTime, DateTimeOffset sunsetTime2)
-        //todo: эта функци будет вызывать getsunsettime три раза, планировать таймлапсы и та проверка короче будет здесь а не там
         {
             try
             {
